@@ -25,9 +25,20 @@ public final class JafuHudElements {
             50
     );
 
+    public static final JafuHudElement SACKS_STASH_TRACKER = new JafuHudElement(
+            JafuModules.SACKS_STASH_TRACKER,
+            JafuModules.SACKS_STASH_TRACKER,
+            "Sacks/Stash Tracker",
+            8,
+            176,
+            244,
+            90
+    );
+
     private static final List<JafuHudElement> ELEMENTS = List.of(
             POWDER_CHEST_TRACKER,
-            ETHERWARP_HELPER
+            ETHERWARP_HELPER,
+            SACKS_STASH_TRACKER
     );
 
     private JafuHudElements() {

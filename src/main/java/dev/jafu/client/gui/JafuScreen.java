@@ -4,6 +4,8 @@ import java.util.List;
 
 import dev.jafu.client.feature.mining.powder.PowderChestSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestStatOption;
+import dev.jafu.client.feature.mining.sacks.SacksStashOption;
+import dev.jafu.client.feature.mining.sacks.SacksStashSettings;
 import dev.jafu.client.gui.util.GuiDraw;
 import dev.jafu.client.gui.util.Rect;
 import dev.jafu.client.module.JafuCategory;
@@ -64,6 +66,10 @@ public final class JafuScreen extends Screen {
         }
 
         if (togglePowderTrackerOption(layout, click)) {
+            return true;
+        }
+
+        if (toggleSacksStashTrackerOption(layout, click)) {
             return true;
         }
 
@@ -241,6 +247,8 @@ public final class JafuScreen extends Screen {
 
         if (JafuModules.POWDER_CHEST_TRACKER.equals(selectedModule.id())) {
             drawPowderTrackerOptions(context, detailPanel);
+        } else if (JafuModules.SACKS_STASH_TRACKER.equals(selectedModule.id())) {
+            drawSacksStashTrackerOptions(context, detailPanel);
         } else {
             drawPreview(context, detailPanel);
         }
@@ -255,6 +263,21 @@ public final class JafuScreen extends Screen {
             Rect row = powderTrackerOptionRow(detailPanel, i);
             Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
             boolean visible = PowderChestSettings.INSTANCE.isVisible(option);
+
+            GuiDraw.fill(context, checkbox, visible ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
+            GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), visible ? JafuTheme.ACCENT : JafuTheme.BORDER);
+            GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+        }
+    }
+
+    private void drawSacksStashTrackerOptions(DrawContext context, Rect detailPanel) {
+        GuiDraw.text(context, textRenderer, "Tracker fields", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
+        List<SacksStashOption> options = SacksStashOption.all();
+        for (int i = 0; i < options.size(); i++) {
+            SacksStashOption option = options.get(i);
+            Rect row = trackerOptionRow(detailPanel, i);
+            Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
+            boolean visible = SacksStashSettings.INSTANCE.isVisible(option);
 
             GuiDraw.fill(context, checkbox, visible ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
             GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), visible ? JafuTheme.ACCENT : JafuTheme.BORDER);
@@ -311,7 +334,28 @@ public final class JafuScreen extends Screen {
         return false;
     }
 
+    private boolean toggleSacksStashTrackerOption(JafuLayout layout, Click click) {
+        JafuModule selectedModule = selectedModule();
+        if (!JafuModules.SACKS_STASH_TRACKER.equals(selectedModule.id())) {
+            return false;
+        }
+
+        Rect detailPanel = layout.detailPanel();
+        List<SacksStashOption> options = SacksStashOption.all();
+        for (int i = 0; i < options.size(); i++) {
+            if (trackerOptionRow(detailPanel, i).contains(click.x(), click.y())) {
+                SacksStashSettings.INSTANCE.toggle(options.get(i));
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static Rect powderTrackerOptionRow(Rect detailPanel, int index) {
+        return trackerOptionRow(detailPanel, index);
+    }
+
+    private static Rect trackerOptionRow(Rect detailPanel, int index) {
         return new Rect(detailPanel.x() + 16, detailPanel.y() + 78 + index * 20, detailPanel.width() - 32, 16);
     }
 }
