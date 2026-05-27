@@ -12,7 +12,9 @@ public final class JafuHudElements {
             8,
             14,
             244,
-            150
+            150,
+            156,
+            86
     );
 
     public static final JafuHudElement ETHERWARP_HELPER = new JafuHudElement(
@@ -22,7 +24,9 @@ public final class JafuHudElements {
             8,
             126,
             190,
-            50
+            50,
+            132,
+            44
     );
 
     public static final JafuHudElement SACKS_STASH_TRACKER = new JafuHudElement(
@@ -32,7 +36,9 @@ public final class JafuHudElements {
             8,
             176,
             244,
-            90
+            90,
+            156,
+            66
     );
 
     public static final JafuHudElement ITEM_VIEW = new JafuHudElement(
@@ -42,7 +48,9 @@ public final class JafuHudElements {
             260,
             14,
             150,
-            150
+            150,
+            72,
+            72
     );
 
     private static final List<JafuHudElement> ELEMENTS = List.of(

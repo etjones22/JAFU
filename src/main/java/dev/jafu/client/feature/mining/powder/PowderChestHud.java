@@ -74,7 +74,7 @@ public final class PowderChestHud {
             long amount = animated ? Math.round(animatedValue(animatedAmounts, drop.name(), drop.amount(), animationStep)) : drop.amount();
             GuiDraw.fill(context, new Rect(x, (int) Math.round(drawRowY) + 2, 3, 6), dropColor);
             drawText(context, textRenderer, format(amount), x + 8, (int) Math.round(drawRowY), dim(dropColor));
-            drawText(context, textRenderer, trimToWidth(textRenderer, drop.name(), WIDTH - 76), x + 66, (int) Math.round(drawRowY), dropColor);
+            drawText(context, textRenderer, trimToWidth(textRenderer, drop.name(), bounds.width() - 76), x + 66, (int) Math.round(drawRowY), dropColor);
             rowY += LINE_HEIGHT;
         }
         animatedAmounts.keySet().removeIf(name -> !visibleDropNames.contains(name));

@@ -7,6 +7,8 @@ public record JafuHudElement(
         int defaultX,
         int defaultY,
         int width,
-        int height
+        int height,
+        int minWidth,
+        int minHeight
 ) {
 }
