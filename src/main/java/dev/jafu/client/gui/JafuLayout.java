@@ -25,7 +25,7 @@ public record JafuLayout(Rect panel, Rect sidebar, Rect header, Rect closeButton
     }
 
     public Rect categoryButton(int index) {
-        return new Rect(panel.x() + 13, panel.y() + 62 + index * 34, 122, 24);
+        return new Rect(panel.x() + 13, panel.y() + 58 + index * 30, 122, 24);
     }
 
     public Rect moduleRow(int index) {
@@ -42,11 +42,11 @@ public record JafuLayout(Rect panel, Rect sidebar, Rect header, Rect closeButton
     }
 
     public Rect commandBadge() {
-        return new Rect(panel.x() + 18, panel.y() + 262, 110, 20);
+        return new Rect(panel.x() + 18, panel.bottom() - 74, 110, 20);
     }
 
     public Rect hudLayoutButton() {
-        return new Rect(panel.x() + 18, panel.y() + 292, 110, 22);
+        return new Rect(panel.x() + 18, panel.bottom() - 44, 110, 22);
     }
 
     public int contentX() {

@@ -19,6 +19,7 @@ import dev.jafu.client.feature.mining.powder.PowderChestSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestStatOption;
 import dev.jafu.client.feature.mining.sacks.SacksStashOption;
 import dev.jafu.client.feature.mining.sacks.SacksStashSettings;
+import dev.jafu.client.feature.qol.modhider.ModHiderSettings;
 import dev.jafu.client.gui.util.GuiDraw;
 import dev.jafu.client.gui.util.Rect;
 import dev.jafu.client.module.JafuCategory;
@@ -34,6 +35,7 @@ public final class JafuScreen extends Screen {
     private static final Text TITLE = Text.literal("JAFU");
     private static final String SUBTITLE = "Just A Few Updates";
     private static final String COMMAND = "/jafu";
+    private static final String MOD_HIDER_TOOLTIP = "Blocks ModAnnouncer packets that mods like Firament send.";
     private static final long SCREEN_ANIMATION_MILLIS = 180L;
     private static final long PANEL_TRANSITION_MILLIS = 160L;
 
@@ -96,6 +98,7 @@ public final class JafuScreen extends Screen {
         context.getMatrices().popMatrix();
 
         super.render(context, mouseX, mouseY, deltaTicks);
+        drawHoverTooltip(context, layout, mouseX, mouseY);
     }
 
     @Override
@@ -257,15 +260,19 @@ public final class JafuScreen extends Screen {
         List<JafuModule> modules = visibleModules();
         for (int i = 0; i < modules.size(); i++) {
             if (layout.moduleToggle(i).contains(click.x(), click.y())) {
-                if (JafuModules.GLOBAL_SETTINGS.equals(modules.get(i).id())
-                        || JafuModules.GUI_SETTINGS.equals(modules.get(i).id())) {
+                JafuModule module = modules.get(i);
+                if (JafuModules.GLOBAL_SETTINGS.equals(module.id())
+                        || JafuModules.GUI_SETTINGS.equals(module.id())) {
                     if (selectedModuleIndex != i) {
                         detailTransitionStartedAtMillis = System.currentTimeMillis();
                     }
                     selectedModuleIndex = i;
                     return true;
                 }
-                modules.get(i).toggle();
+                module.toggle();
+                if (JafuModules.MOD_HIDER.equals(module.id())) {
+                    ModHiderSettings.INSTANCE.setEnabled(module.enabled());
+                }
                 detailTransitionStartedAtMillis = System.currentTimeMillis();
                 selectedModuleIndex = i;
                 return true;
@@ -626,6 +633,21 @@ public final class JafuScreen extends Screen {
         Rect status = new Rect(panel.x() + 400, panel.bottom() - 76, panel.right() - panel.x() - 434, 20);
         GuiDraw.fill(context, status, JafuTheme.CONTROL);
         GuiDraw.text(context, textRenderer, "Status: scaffolded", status.x() + 12, status.y() + 6, JafuTheme.GOOD);
+    }
+
+    private void drawHoverTooltip(DrawContext context, JafuLayout layout, int mouseX, int mouseY) {
+        if (closingStartedAtMillis >= 0L || selectedCategory != JafuCategory.QOL) {
+            return;
+        }
+
+        List<JafuModule> modules = visibleModules();
+        for (int i = 0; i < modules.size(); i++) {
+            JafuModule module = modules.get(i);
+            if (JafuModules.MOD_HIDER.equals(module.id()) && layout.moduleRow(i).contains(mouseX, mouseY)) {
+                context.drawTooltip(textRenderer, Text.literal(MOD_HIDER_TOOLTIP), mouseX, mouseY);
+                return;
+            }
+        }
     }
 
     private JafuModule selectedModule() {

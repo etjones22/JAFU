@@ -2,6 +2,7 @@ package dev.jafu.client.module;
 
 public enum JafuCategory {
     GENERAL("General", "General Updates"),
+    QOL("QOL", "Quality of Life"),
     SKYBLOCK("SkyBlock", "SkyBlock Updates"),
     MINING("Mining", "Mining Updates"),
     DUNGEONS("Dungeons", "Dungeon Updates"),

@@ -2,6 +2,7 @@ package dev.jafu.client.module;
 
 import java.util.List;
 
+import dev.jafu.client.feature.qol.modhider.ModHiderSettings;
 import dev.jafu.client.gui.JafuTheme;
 
 public final class JafuModules {
@@ -14,6 +15,7 @@ public final class JafuModules {
     public static final String GLOBAL_SETTINGS = "global_settings";
     public static final String GUI_SETTINGS = "gui_settings";
     public static final String FULLBRIGHT = "fullbright";
+    public static final String MOD_HIDER = "mod_hider";
 
     private static final List<JafuModule> MODULES = List.of(
             new JafuModule(GLOBAL_SETTINGS, JafuCategory.GENERAL, "Global settings", "Shared font and text defaults", true, JafuTheme.ACCENT),
@@ -23,6 +25,7 @@ public final class JafuModules {
             new JafuModule(ITEM_VIEW, JafuCategory.GENERAL, "Item view", "Customizes the first-person held item model", false, JafuTheme.WARN),
             new JafuModule(CHAT_ENHANCEMENTS, JafuCategory.GENERAL, "Chat enhancements", "Smooth chat and clean typography", false, JafuTheme.GOOD),
             new JafuModule(AUTO_UPDATER, JafuCategory.GENERAL, "Auto updater", "Installs stable or snapshot releases on next launch", true, JafuTheme.ACCENT),
+            new JafuModule(MOD_HIDER, JafuCategory.QOL, "Mod Hider", "Blocks selected client mod announcers", ModHiderSettings.INSTANCE.enabled(), JafuTheme.ACCENT),
             new JafuModule("bazaar_reminders", JafuCategory.SKYBLOCK, "Bazaar reminders", "Price movement and flip alerts", false, JafuTheme.GOOD),
             new JafuModule(POWDER_CHEST_TRACKER, JafuCategory.MINING, "Powder chest tracker", "Tracks Crystal Hollows treasure chest rewards", true, JafuTheme.ACCENT),
             new JafuModule(SACKS_STASH_TRACKER, JafuCategory.MINING, "Sacks/stash tracker", "Tracks sack gains and material stash totals", true, JafuTheme.GOOD),
