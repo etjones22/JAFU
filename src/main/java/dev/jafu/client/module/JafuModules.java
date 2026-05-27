@@ -21,7 +21,7 @@ public final class JafuModules {
             new JafuModule(GLOBAL_SETTINGS, JafuCategory.GENERAL, "Global settings", "Shared font and text defaults", true, JafuTheme.ACCENT),
             new JafuModule(GUI_SETTINGS, JafuCategory.GENERAL, "GUI settings", "Customizes the JAFU menu appearance", true, JafuTheme.GOOD),
             new JafuModule(FAST_ETHERWARP_HELPER, JafuCategory.GENERAL, "Fast etherwarp helper", "Shows AOTE/AOTV held-use timing without macros", false, JafuTheme.ACCENT),
-            new JafuModule(FULLBRIGHT, JafuCategory.GENERAL, "Fullbright", "Keeps world lighting fully visible", false, JafuTheme.ACCENT),
+            new JafuModule(FULLBRIGHT, JafuCategory.QOL, "Fullbright", "Keeps world lighting fully visible", false, JafuTheme.ACCENT),
             new JafuModule(ITEM_VIEW, JafuCategory.GENERAL, "Item view", "Customizes the first-person held item model", false, JafuTheme.WARN),
             new JafuModule(CHAT_ENHANCEMENTS, JafuCategory.GENERAL, "Chat enhancements", "Smooth chat and clean typography", false, JafuTheme.GOOD),
             new JafuModule(AUTO_UPDATER, JafuCategory.GENERAL, "Auto updater", "Installs stable or snapshot releases on next launch", true, JafuTheme.ACCENT),
