@@ -33,7 +33,7 @@ public final class PowderChestHud {
         TextRenderer textRenderer = client.textRenderer;
         PowderChestSnapshot snapshot = tracker.snapshot();
         List<PowderChestDrop> drops = snapshot.topDrops(MAX_DROPS);
-        int height = 50 + drops.size() * LINE_HEIGHT;
+        int height = 50 + PowderChestSettings.INSTANCE.visibleStatCount() * LINE_HEIGHT + drops.size() * LINE_HEIGHT;
         Rect bounds = HudLayoutStore.INSTANCE.bounds(
                 JafuHudElements.POWDER_CHEST_TRACKER,
                 WIDTH,
@@ -52,6 +52,7 @@ public final class PowderChestHud {
         GuiDraw.text(context, textRenderer, format(snapshot.gemstonePowder()), x + 116, y + 24, 0xFFFFAA00);
 
         int rowY = y + 40;
+        rowY = drawStats(context, textRenderer, snapshot.stats(), x, rowY);
         for (PowderChestDrop drop : drops) {
             int dropColor = PowderChestDropColors.forName(drop.name());
             String amount = format(drop.amount());
@@ -64,6 +65,49 @@ public final class PowderChestHud {
 
     private static String format(long value) {
         return String.format("%,d", value);
+    }
+
+    private static int drawStats(
+            DrawContext context,
+            TextRenderer textRenderer,
+            PowderChestSessionStats stats,
+            int x,
+            int rowY
+    ) {
+        rowY = drawStat(context, textRenderer, PowderChestStatOption.SESSION_TIMER, "Time", formatDuration(stats.elapsedMillis()), x, rowY);
+        rowY = drawStat(context, textRenderer, PowderChestStatOption.CHESTS_PER_HOUR, "Chests/hr", String.format("%.1f", stats.chestsPerHour()), x, rowY);
+        rowY = drawStat(context, textRenderer, PowderChestStatOption.GEMSTONE_POWDER_PER_HOUR, "Powder/hr", format(stats.gemstonePowderPerHour()), x, rowY);
+        rowY = drawStat(context, textRenderer, PowderChestStatOption.AVERAGE_POWDER_PER_CHEST, "Avg/chest", format(stats.averageGemstonePowderPerChest()), x, rowY);
+        return drawStat(context, textRenderer, PowderChestStatOption.BEST_CHEST, "Best chest", format(stats.bestChestGemstonePowder()), x, rowY);
+    }
+
+    private static int drawStat(
+            DrawContext context,
+            TextRenderer textRenderer,
+            PowderChestStatOption option,
+            String label,
+            String value,
+            int x,
+            int rowY
+    ) {
+        if (!PowderChestSettings.INSTANCE.isVisible(option)) {
+            return rowY;
+        }
+
+        GuiDraw.text(context, textRenderer, label + ":", x, rowY, JafuTheme.TEXT_MUTED);
+        GuiDraw.text(context, textRenderer, value, x + 82, rowY, JafuTheme.GOOD);
+        return rowY + LINE_HEIGHT;
+    }
+
+    private static String formatDuration(long elapsedMillis) {
+        long totalSeconds = Math.max(0L, elapsedMillis / 1000L);
+        long hours = totalSeconds / 3600L;
+        long minutes = totalSeconds % 3600L / 60L;
+        long seconds = totalSeconds % 60L;
+        if (hours > 0L) {
+            return String.format("%d:%02d:%02d", hours, minutes, seconds);
+        }
+        return String.format("%02d:%02d", minutes, seconds);
     }
 
     private static int dim(int color) {

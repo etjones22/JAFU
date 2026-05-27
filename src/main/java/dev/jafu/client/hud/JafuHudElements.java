@@ -12,7 +12,7 @@ public final class JafuHudElements {
             8,
             14,
             244,
-            100
+            150
     );
 
     public static final JafuHudElement ETHERWARP_HELPER = new JafuHudElement(

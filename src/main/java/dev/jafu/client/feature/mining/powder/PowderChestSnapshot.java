@@ -4,7 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-public record PowderChestSnapshot(int chests, Map<String, Long> totals) {
+public record PowderChestSnapshot(int chests, Map<String, Long> totals, PowderChestSessionStats stats) {
     private static final String GEMSTONE_POWDER = "Gemstone Powder";
 
     public long gemstonePowder() {
