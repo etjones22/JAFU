@@ -16,4 +16,8 @@ public final class PowderChestFeature {
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> TRACKER.acceptMessage(message.getString()));
         HudElementRegistry.addLast(Identifier.of(JafuClient.MOD_ID, "powder_chest_tracker"), HUD::render);
     }
+
+    public static void resetTracker() {
+        TRACKER.reset();
+    }
 }

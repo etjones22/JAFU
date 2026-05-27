@@ -69,6 +69,17 @@ public final class PowderChestTracker {
         return new PowderChestSnapshot(chests, Map.copyOf(totals), stats);
     }
 
+    public void reset() {
+        totals.clear();
+        awaitingRewards = false;
+        collectingRewards = false;
+        countedCurrentChest = false;
+        chests = 0;
+        sessionStartMillis = 0L;
+        currentChestGemstonePowder = 0L;
+        bestChestGemstonePowder = 0L;
+    }
+
     private void countCurrentChest() {
         if (!countedCurrentChest) {
             if (sessionStartMillis == 0L) {

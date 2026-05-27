@@ -11,6 +11,7 @@ import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.general.updater.AutoUpdaterSettings;
 import dev.jafu.client.feature.general.updater.UpdateChannel;
+import dev.jafu.client.feature.mining.powder.PowderChestFeature;
 import dev.jafu.client.feature.mining.powder.PowderChestSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestStatOption;
 import dev.jafu.client.feature.mining.sacks.SacksStashOption;
@@ -349,6 +350,11 @@ public final class JafuScreen extends Screen {
             GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), visible ? JafuTheme.ACCENT : JafuTheme.BORDER);
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
+
+        Rect resetButton = powderTrackerResetButton(detailPanel);
+        GuiDraw.text(context, textRenderer, "Session", detailPanel.x() + 16, resetButton.y() - 16, JafuTheme.TEXT_MUTED);
+        GuiDraw.fill(context, resetButton, JafuTheme.CONTROL);
+        GuiDraw.text(context, textRenderer, "Reset stats", resetButton.x() + 13, resetButton.y() + 6, JafuTheme.WARN);
     }
 
     private void drawGlobalSettingsOptions(DrawContext context, Rect detailPanel) {
@@ -513,6 +519,11 @@ public final class JafuScreen extends Screen {
                 return true;
             }
         }
+
+        if (powderTrackerResetButton(detailPanel).contains(click.x(), click.y())) {
+            PowderChestFeature.resetTracker();
+            return true;
+        }
         return false;
     }
 
@@ -649,6 +660,11 @@ public final class JafuScreen extends Screen {
 
     private static Rect powderTrackerOptionRow(Rect detailPanel, int index) {
         return trackerOptionRow(detailPanel, index);
+    }
+
+    private static Rect powderTrackerResetButton(Rect detailPanel) {
+        Rect row = trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 1);
+        return new Rect(row.x(), row.y(), 82, 18);
     }
 
     private static Rect trackerOptionRow(Rect detailPanel, int index) {
