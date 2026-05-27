@@ -1,0 +1,44 @@
+name: Dev Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Build dev jar
+        run: |
+          chmod +x ./gradlew
+          base_version="$(grep '^mod_version=' gradle.properties | cut -d= -f2)"
+          short_sha="${GITHUB_SHA::7}"
+          version="${base_version}+dev.${short_sha}"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          ./gradlew build -Pmod_version="$version"
+          cp "build/libs/jafu-${version}.jar" build/libs/jafu-dev.jar
+
+      - name: Publish dev-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete dev-latest --yes --cleanup-tag || true
+          gh release create dev-latest build/libs/jafu-dev.jar \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "JAFU Dev ${GITHUB_SHA::7}" \
+            --notes "Development build from commit ${GITHUB_SHA}."

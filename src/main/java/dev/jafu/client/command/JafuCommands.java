@@ -1,5 +1,7 @@
 package dev.jafu.client.command;
 
+import dev.jafu.client.feature.general.updater.AutoUpdater;
+import dev.jafu.client.feature.general.updater.UpdateChannel;
 import dev.jafu.client.gui.JafuScreen;
 import dev.jafu.client.gui.HudLayoutScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -18,7 +20,19 @@ public final class JafuCommands {
                 }).then(ClientCommandManager.literal("layout").executes(context -> {
                     openLayout();
                     return 1;
-                }))));
+                })).then(ClientCommandManager.literal("update").executes(context -> {
+                    AutoUpdater.checkNow(true);
+                    return 1;
+                }).then(ClientCommandManager.literal("check").executes(context -> {
+                    AutoUpdater.checkNow(true);
+                    return 1;
+                })).then(ClientCommandManager.literal("stable").executes(context -> {
+                    AutoUpdater.setChannel(UpdateChannel.STABLE, true);
+                    return 1;
+                })).then(ClientCommandManager.literal("dev").executes(context -> {
+                    AutoUpdater.setChannel(UpdateChannel.DEV, true);
+                    return 1;
+                })))));
     }
 
     private static void openMenu() {

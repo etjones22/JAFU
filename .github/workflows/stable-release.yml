@@ -1,0 +1,74 @@
+name: Stable Release
+
+on:
+  schedule:
+    - cron: "0 12 * * 5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fortnight gate
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          week="$(date -u +%V)"
+          if [ $((10#$week % 2)) -eq 0 ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.gate.outputs.publish == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        if: steps.gate.outputs.publish == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Read version
+        if: steps.gate.outputs.publish == 'true'
+        run: |
+          version="$(grep '^mod_version=' gradle.properties | cut -d= -f2)"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "TAG=v$version" >> "$GITHUB_ENV"
+
+      - name: Check existing release
+        if: steps.gate.outputs.publish == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build stable jar
+        if: steps.gate.outputs.publish == 'true' && steps.existing.outputs.exists == 'false'
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build
+
+      - name: Publish stable release
+        if: steps.gate.outputs.publish == 'true' && steps.existing.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" "build/libs/jafu-${VERSION}.jar" \
+            --target "$GITHUB_SHA" \
+            --title "JAFU ${VERSION}" \
+            --notes "Stable JAFU release ${VERSION}."

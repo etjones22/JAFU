@@ -10,11 +10,13 @@ public final class JafuModules {
     public static final String FAST_ETHERWARP_HELPER = "fast_etherwarp_helper";
     public static final String ITEM_VIEW = "item_view";
     public static final String CHAT_ENHANCEMENTS = "chat_enhancements";
+    public static final String AUTO_UPDATER = "auto_updater";
 
     private static final List<JafuModule> MODULES = List.of(
             new JafuModule(FAST_ETHERWARP_HELPER, JafuCategory.GENERAL, "Fast etherwarp helper", "Shows AOTE/AOTV held-use timing without macros", false, JafuTheme.ACCENT),
             new JafuModule(ITEM_VIEW, JafuCategory.GENERAL, "Item view", "Shows a customizable held-item preview", false, JafuTheme.WARN),
             new JafuModule(CHAT_ENHANCEMENTS, JafuCategory.GENERAL, "Chat enhancements", "Smooth chat and clean typography", false, JafuTheme.GOOD),
+            new JafuModule(AUTO_UPDATER, JafuCategory.GENERAL, "Auto updater", "Installs stable or dev releases on next launch", true, JafuTheme.ACCENT),
             new JafuModule("bazaar_reminders", JafuCategory.SKYBLOCK, "Bazaar reminders", "Price movement and flip alerts", false, JafuTheme.GOOD),
             new JafuModule(POWDER_CHEST_TRACKER, JafuCategory.MINING, "Powder chest tracker", "Tracks Crystal Hollows treasure chest rewards", true, JafuTheme.ACCENT),
             new JafuModule(SACKS_STASH_TRACKER, JafuCategory.MINING, "Sacks/stash tracker", "Tracks sack gains and material stash totals", true, JafuTheme.GOOD),

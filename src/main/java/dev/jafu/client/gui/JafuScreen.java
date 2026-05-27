@@ -6,6 +6,9 @@ import dev.jafu.client.feature.general.chat.ChatEnhancementOption;
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.feature.general.itemview.ItemViewSetting;
 import dev.jafu.client.feature.general.itemview.ItemViewSettings;
+import dev.jafu.client.feature.general.updater.AutoUpdater;
+import dev.jafu.client.feature.general.updater.AutoUpdaterSettings;
+import dev.jafu.client.feature.general.updater.UpdateChannel;
 import dev.jafu.client.feature.mining.powder.PowderChestSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestStatOption;
 import dev.jafu.client.feature.mining.sacks.SacksStashOption;
@@ -83,6 +86,10 @@ public final class JafuScreen extends Screen {
         }
 
         if (toggleChatEnhancementOption(layout, click)) {
+            return true;
+        }
+
+        if (toggleAutoUpdaterOption(layout, click)) {
             return true;
         }
 
@@ -286,6 +293,8 @@ public final class JafuScreen extends Screen {
             drawItemViewOptions(context, detailPanel);
         } else if (JafuModules.CHAT_ENHANCEMENTS.equals(selectedModule.id())) {
             drawChatEnhancementOptions(context, detailPanel);
+        } else if (JafuModules.AUTO_UPDATER.equals(selectedModule.id())) {
+            drawAutoUpdaterOptions(context, detailPanel);
         } else {
             drawPreview(context, detailPanel);
         }
@@ -354,6 +363,21 @@ public final class JafuScreen extends Screen {
             GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), visible ? JafuTheme.ACCENT : JafuTheme.BORDER);
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
+    }
+
+    private void drawAutoUpdaterOptions(DrawContext context, Rect detailPanel) {
+        GuiDraw.text(context, textRenderer, "Release channel", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
+
+        Rect row = trackerOptionRow(detailPanel, 0);
+        Rect control = new Rect(row.right() - 72, row.y(), 72, 16);
+        UpdateChannel channel = AutoUpdaterSettings.INSTANCE.channel();
+
+        GuiDraw.text(context, textRenderer, "Channel", row.x(), row.y() + 4, JafuTheme.TEXT);
+        GuiDraw.fill(context, control, JafuTheme.CONTROL);
+        GuiDraw.text(context, textRenderer, channel.label(), control.x() + 12, control.y() + 4, JafuTheme.ACCENT);
+
+        GuiDraw.text(context, textRenderer, "Commands", detailPanel.x() + 16, detailPanel.y() + 120, JafuTheme.TEXT_MUTED);
+        GuiDraw.text(context, textRenderer, "/jafu update check", detailPanel.x() + 16, detailPanel.y() + 140, JafuTheme.TEXT);
     }
 
     private void drawPreview(DrawContext context, Rect detailPanel) {
@@ -454,6 +478,21 @@ public final class JafuScreen extends Screen {
                 ChatEnhancementsSettings.INSTANCE.toggle(options.get(i));
                 return true;
             }
+        }
+        return false;
+    }
+
+    private boolean toggleAutoUpdaterOption(JafuLayout layout, Click click) {
+        JafuModule selectedModule = selectedModule();
+        if (!JafuModules.AUTO_UPDATER.equals(selectedModule.id())) {
+            return false;
+        }
+
+        Rect detailPanel = layout.detailPanel();
+        if (trackerOptionRow(detailPanel, 0).contains(click.x(), click.y())) {
+            UpdateChannel channel = AutoUpdaterSettings.INSTANCE.cycleChannel();
+            AutoUpdater.notifyPlayer("JAFU updater channel set to " + channel.label() + ".");
+            return true;
         }
         return false;
     }
