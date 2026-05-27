@@ -14,7 +14,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 
 public final class PowderChestHud {
-    private static final int WIDTH = 220;
+    private static final int WIDTH = 244;
     private static final int LINE_HEIGHT = 10;
     private static final int MAX_DROPS = 6;
 
@@ -53,13 +53,38 @@ public final class PowderChestHud {
 
         int rowY = y + 40;
         for (PowderChestDrop drop : drops) {
-            GuiDraw.text(context, textRenderer, format(drop.amount()), x, rowY, JafuTheme.GOOD);
-            GuiDraw.text(context, textRenderer, drop.name(), x + 58, rowY, JafuTheme.TEXT);
+            int dropColor = PowderChestDropColors.forName(drop.name());
+            String amount = format(drop.amount());
+            GuiDraw.fill(context, new Rect(x, rowY + 2, 3, 6), dropColor);
+            GuiDraw.text(context, textRenderer, amount, x + 8, rowY, dim(dropColor));
+            GuiDraw.text(context, textRenderer, trimToWidth(textRenderer, drop.name(), WIDTH - 76), x + 66, rowY, dropColor);
             rowY += LINE_HEIGHT;
         }
     }
 
     private static String format(long value) {
         return String.format("%,d", value);
+    }
+
+    private static int dim(int color) {
+        int alpha = color & 0xFF000000;
+        int red = ((color >> 16) & 0xFF) * 3 / 4;
+        int green = ((color >> 8) & 0xFF) * 3 / 4;
+        int blue = (color & 0xFF) * 3 / 4;
+        return alpha | red << 16 | green << 8 | blue;
+    }
+
+    private static String trimToWidth(TextRenderer textRenderer, String text, int maxWidth) {
+        if (textRenderer.getWidth(text) <= maxWidth) {
+            return text;
+        }
+
+        String ellipsis = "...";
+        int ellipsisWidth = textRenderer.getWidth(ellipsis);
+        String trimmed = text;
+        while (!trimmed.isEmpty() && textRenderer.getWidth(trimmed) + ellipsisWidth > maxWidth) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed + ellipsis;
     }
 }

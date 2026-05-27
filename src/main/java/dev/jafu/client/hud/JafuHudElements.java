@@ -11,7 +11,7 @@ public final class JafuHudElements {
             "Powder Chest Tracker",
             8,
             14,
-            220,
+            244,
             100
     );
 
