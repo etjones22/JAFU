@@ -8,9 +8,11 @@ public final class JafuModules {
     public static final String POWDER_CHEST_TRACKER = "powder_chest_tracker";
     public static final String SACKS_STASH_TRACKER = "sacks_stash_tracker";
     public static final String FAST_ETHERWARP_HELPER = "fast_etherwarp_helper";
+    public static final String ITEM_VIEW = "item_view";
 
     private static final List<JafuModule> MODULES = List.of(
             new JafuModule(FAST_ETHERWARP_HELPER, JafuCategory.GENERAL, "Fast etherwarp helper", "Shows AOTE/AOTV held-use timing without macros", false, JafuTheme.ACCENT),
+            new JafuModule(ITEM_VIEW, JafuCategory.GENERAL, "Item view", "Shows a customizable held-item preview", false, JafuTheme.WARN),
             new JafuModule("bazaar_reminders", JafuCategory.SKYBLOCK, "Bazaar reminders", "Price movement and flip alerts", false, JafuTheme.GOOD),
             new JafuModule(POWDER_CHEST_TRACKER, JafuCategory.MINING, "Powder chest tracker", "Tracks Crystal Hollows treasure chest rewards", true, JafuTheme.ACCENT),
             new JafuModule(SACKS_STASH_TRACKER, JafuCategory.MINING, "Sacks/stash tracker", "Tracks sack gains and material stash totals", true, JafuTheme.GOOD),

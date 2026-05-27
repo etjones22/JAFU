@@ -2,6 +2,8 @@ package dev.jafu.client.gui;
 
 import java.util.List;
 
+import dev.jafu.client.feature.general.itemview.ItemViewSetting;
+import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestStatOption;
 import dev.jafu.client.feature.mining.sacks.SacksStashOption;
@@ -24,6 +26,7 @@ public final class JafuScreen extends Screen {
 
     private JafuCategory selectedCategory = JafuCategory.GENERAL;
     private int selectedModuleIndex;
+    private ItemViewSetting draggingItemViewSetting;
 
     public JafuScreen() {
         super(TITLE);
@@ -73,6 +76,10 @@ public final class JafuScreen extends Screen {
             return true;
         }
 
+        if (startItemViewSlider(layout, click)) {
+            return true;
+        }
+
         if (selectCategory(layout, click)) {
             return true;
         }
@@ -86,6 +93,26 @@ public final class JafuScreen extends Screen {
         }
 
         return super.mouseClicked(click, doubled);
+    }
+
+    @Override
+    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+        if (draggingItemViewSetting != null) {
+            updateItemViewSlider(JafuLayout.fromScreen(width, height), draggingItemViewSetting, click.x());
+            return true;
+        }
+
+        return super.mouseDragged(click, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseReleased(Click click) {
+        if (draggingItemViewSetting != null) {
+            draggingItemViewSetting = null;
+            return true;
+        }
+
+        return super.mouseReleased(click);
     }
 
     private boolean selectCategory(JafuLayout layout, Click click) {
@@ -249,6 +276,8 @@ public final class JafuScreen extends Screen {
             drawPowderTrackerOptions(context, detailPanel);
         } else if (JafuModules.SACKS_STASH_TRACKER.equals(selectedModule.id())) {
             drawSacksStashTrackerOptions(context, detailPanel);
+        } else if (JafuModules.ITEM_VIEW.equals(selectedModule.id())) {
+            drawItemViewOptions(context, detailPanel);
         } else {
             drawPreview(context, detailPanel);
         }
@@ -267,6 +296,25 @@ public final class JafuScreen extends Screen {
             GuiDraw.fill(context, checkbox, visible ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
             GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), visible ? JafuTheme.ACCENT : JafuTheme.BORDER);
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+        }
+    }
+
+    private void drawItemViewOptions(DrawContext context, Rect detailPanel) {
+        GuiDraw.text(context, textRenderer, "Item view", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
+        List<ItemViewSetting> settings = ItemViewSetting.all();
+        for (int i = 0; i < settings.size(); i++) {
+            ItemViewSetting setting = settings.get(i);
+            Rect row = trackerOptionRow(detailPanel, i);
+            Rect slider = itemViewSlider(detailPanel, i);
+            double value = ItemViewSettings.INSTANCE.value(setting);
+            double percent = (value - setting.min()) / (setting.max() - setting.min());
+            int knobX = slider.x() + (int) Math.round(percent * slider.width());
+
+            GuiDraw.text(context, textRenderer, setting.label(), row.x(), row.y() + 4, JafuTheme.TEXT);
+            GuiDraw.text(context, textRenderer, formatSliderValue(setting, value), row.right() - 42, row.y() + 4, JafuTheme.TEXT_MUTED);
+            GuiDraw.fill(context, slider, JafuTheme.CONTROL);
+            GuiDraw.fill(context, new Rect(slider.x(), slider.y(), knobX - slider.x(), slider.height()), JafuTheme.ACCENT_SOFT);
+            GuiDraw.fill(context, new Rect(knobX - 2, slider.y() - 2, 4, slider.height() + 4), JafuTheme.ACCENT);
         }
     }
 
@@ -351,11 +399,49 @@ public final class JafuScreen extends Screen {
         return false;
     }
 
+    private boolean startItemViewSlider(JafuLayout layout, Click click) {
+        JafuModule selectedModule = selectedModule();
+        if (!JafuModules.ITEM_VIEW.equals(selectedModule.id())) {
+            return false;
+        }
+
+        Rect detailPanel = layout.detailPanel();
+        List<ItemViewSetting> settings = ItemViewSetting.all();
+        for (int i = 0; i < settings.size(); i++) {
+            Rect row = trackerOptionRow(detailPanel, i);
+            if (row.contains(click.x(), click.y())) {
+                draggingItemViewSetting = settings.get(i);
+                updateItemViewSlider(layout, draggingItemViewSetting, click.x());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void updateItemViewSlider(JafuLayout layout, ItemViewSetting setting, double mouseX) {
+        Rect slider = itemViewSlider(layout.detailPanel(), ItemViewSetting.all().indexOf(setting));
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = setting.min() + percent * (setting.max() - setting.min());
+        ItemViewSettings.INSTANCE.setValue(setting, value);
+    }
+
     private static Rect powderTrackerOptionRow(Rect detailPanel, int index) {
         return trackerOptionRow(detailPanel, index);
     }
 
     private static Rect trackerOptionRow(Rect detailPanel, int index) {
         return new Rect(detailPanel.x() + 16, detailPanel.y() + 78 + index * 20, detailPanel.width() - 32, 16);
+    }
+
+    private static Rect itemViewSlider(Rect detailPanel, int index) {
+        Rect row = trackerOptionRow(detailPanel, index);
+        return new Rect(row.x() + 48, row.y() + 7, Math.max(30, row.width() - 96), 4);
+    }
+
+    private static String formatSliderValue(ItemViewSetting setting, double value) {
+        if (setting == ItemViewSetting.SPEED) {
+            return String.format("%.2f", value);
+        }
+        return Integer.toString((int) Math.round(value));
     }
 }
