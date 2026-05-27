@@ -56,8 +56,12 @@ public final class JafuScreen extends Screen {
         drawFrame(context, layout);
         drawHeader(context, layout, mouseX, mouseY);
         drawCategories(context, layout);
-        drawModuleList(context, layout, mouseX, mouseY);
-        drawModuleDetails(context, layout);
+        if (selectedCategory == JafuCategory.CREDITS) {
+            drawCredits(context, layout);
+        } else {
+            drawModuleList(context, layout, mouseX, mouseY);
+            drawModuleDetails(context, layout);
+        }
 
         super.render(context, mouseX, mouseY, deltaTicks);
     }
@@ -77,6 +81,14 @@ public final class JafuScreen extends Screen {
         if (layout.hudLayoutButton().contains(click.x(), click.y())) {
             client.setScreen(new HudLayoutScreen(this));
             return true;
+        }
+
+        if (selectCategory(layout, click)) {
+            return true;
+        }
+
+        if (selectedCategory == JafuCategory.CREDITS) {
+            return super.mouseClicked(click, doubled);
         }
 
         if (togglePowderTrackerOption(layout, click)) {
@@ -100,10 +112,6 @@ public final class JafuScreen extends Screen {
         }
 
         if (toggleAutoUpdaterOption(layout, click)) {
-            return true;
-        }
-
-        if (selectCategory(layout, click)) {
             return true;
         }
 
@@ -273,6 +281,30 @@ public final class JafuScreen extends Screen {
                 layout.contentBottom() - 22,
                 JafuTheme.TEXT_MUTED
         );
+    }
+
+    private void drawCredits(DrawContext context, JafuLayout layout) {
+        Rect panel = layout.panel();
+        Rect creditsPanel = new Rect(panel.x() + 166, panel.y() + 72, panel.right() - panel.x() - 184, panel.height() - 116);
+
+        GuiDraw.text(context, textRenderer, selectedCategory.title(), panel.x() + 166, panel.y() + 58, JafuTheme.TEXT);
+        GuiDraw.fill(context, creditsPanel, JafuTheme.PANEL_LIGHT);
+        GuiDraw.horizontalLine(context, creditsPanel.x(), creditsPanel.y(), creditsPanel.width(), JafuTheme.ACCENT);
+
+        int textX = creditsPanel.x() + 18;
+        int textY = creditsPanel.y() + 28;
+        String prefix = "Developed with ";
+        String suffix = " by ";
+        String name = "Chorey";
+        int x = textX;
+
+        GuiDraw.text(context, textRenderer, prefix, x, textY, JafuTheme.TEXT_MUTED);
+        x += textRenderer.getWidth(prefix);
+        GuiDraw.text(context, textRenderer, "\u2665", x, textY, JafuTheme.CLOSE_TEXT_HOVER);
+        x += textRenderer.getWidth("\u2665");
+        GuiDraw.text(context, textRenderer, suffix, x, textY, JafuTheme.TEXT_MUTED);
+        x += textRenderer.getWidth(suffix);
+        GuiDraw.text(context, textRenderer, name, x, textY, JafuTheme.ACCENT);
     }
 
     private void drawModuleRow(
@@ -493,6 +525,9 @@ public final class JafuScreen extends Screen {
 
     private JafuModule selectedModule() {
         List<JafuModule> modules = visibleModules();
+        if (modules.isEmpty()) {
+            throw new IllegalStateException("No module is selected for " + selectedCategory);
+        }
         int safeIndex = MathHelper.clamp(selectedModuleIndex, 0, modules.size() - 1);
         return modules.get(safeIndex);
     }

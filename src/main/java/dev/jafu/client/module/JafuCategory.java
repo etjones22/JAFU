@@ -5,7 +5,8 @@ public enum JafuCategory {
     SKYBLOCK("SkyBlock", "SkyBlock Updates"),
     MINING("Mining", "Mining Updates"),
     DUNGEONS("Dungeons", "Dungeon Updates"),
-    GARDEN("Garden", "Garden Updates");
+    GARDEN("Garden", "Garden Updates"),
+    CREDITS("Credits", "Credits");
 
     private final String label;
     private final String title;
