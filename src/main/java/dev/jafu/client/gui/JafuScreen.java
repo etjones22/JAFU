@@ -1,6 +1,8 @@
 package dev.jafu.client.gui;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import dev.jafu.client.feature.general.chat.ChatEnhancementOption;
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
@@ -32,6 +34,8 @@ public final class JafuScreen extends Screen {
     private static final Text TITLE = Text.literal("JAFU");
     private static final String SUBTITLE = "Just A Few Updates";
     private static final String COMMAND = "/jafu";
+    private static final long SCREEN_ANIMATION_MILLIS = 180L;
+    private static final long PANEL_TRANSITION_MILLIS = 160L;
 
     private JafuCategory selectedCategory = JafuCategory.GENERAL;
     private int selectedModuleIndex;
@@ -39,6 +43,15 @@ public final class JafuScreen extends Screen {
     private boolean draggingGlobalTextScale;
     private boolean draggingChatScale;
     private boolean globalFontDropdownOpen;
+    private final long openedAtMillis = System.currentTimeMillis();
+    private long closingStartedAtMillis = -1L;
+    private long categoryTransitionStartedAtMillis = openedAtMillis;
+    private long detailTransitionStartedAtMillis = openedAtMillis;
+    private long lastFrameMillis;
+    private double animationBlend = 1.0D;
+    private double globalFontDropdownAnimation;
+    private final Map<String, Double> animatedProgress = new HashMap<>();
+    private final Map<String, Double> animatedSliders = new HashMap<>();
 
     public JafuScreen() {
         super(TITLE);
@@ -51,9 +64,26 @@ public final class JafuScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
-        context.fill(0, 0, width, height, 0xA0000000);
+        long nowMillis = System.currentTimeMillis();
+        updateAnimationClock(nowMillis);
+        if (closingStartedAtMillis >= 0L && normalized(nowMillis - closingStartedAtMillis, SCREEN_ANIMATION_MILLIS) >= 1.0D) {
+            client.setScreen(null);
+            return;
+        }
 
         JafuLayout layout = JafuLayout.fromScreen(width, height);
+        double screenProgress = screenProgress(nowMillis);
+        float easedScreenProgress = easeOut((float) screenProgress);
+        context.fill(0, 0, width, height, withAlpha(0x000000, 0.62D * easedScreenProgress));
+
+        float scale = 0.965F + easedScreenProgress * 0.035F;
+        float centerX = layout.panel().x() + layout.panel().width() / 2.0F;
+        float centerY = layout.panel().y() + layout.panel().height() / 2.0F;
+
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate(centerX, centerY);
+        context.getMatrices().scale(scale, scale);
+        context.getMatrices().translate(-centerX, -centerY);
         drawFrame(context, layout);
         drawHeader(context, layout, mouseX, mouseY);
         drawCategories(context, layout);
@@ -63,12 +93,17 @@ public final class JafuScreen extends Screen {
             drawModuleList(context, layout, mouseX, mouseY);
             drawModuleDetails(context, layout);
         }
+        context.getMatrices().popMatrix();
 
         super.render(context, mouseX, mouseY, deltaTicks);
     }
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
+        if (closingStartedAtMillis >= 0L) {
+            return true;
+        }
+
         if (click.button() != 0) {
             return super.mouseClicked(click, doubled);
         }
@@ -133,6 +168,10 @@ public final class JafuScreen extends Screen {
 
     @Override
     public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+        if (closingStartedAtMillis >= 0L) {
+            return true;
+        }
+
         if (draggingItemViewSetting != null) {
             updateItemViewSlider(JafuLayout.fromScreen(width, height), draggingItemViewSetting, click.x());
             return true;
@@ -153,6 +192,10 @@ public final class JafuScreen extends Screen {
 
     @Override
     public boolean mouseReleased(Click click) {
+        if (closingStartedAtMillis >= 0L) {
+            return true;
+        }
+
         if (draggingItemViewSetting != null) {
             draggingItemViewSetting = null;
             return true;
@@ -171,10 +214,22 @@ public final class JafuScreen extends Screen {
         return super.mouseReleased(click);
     }
 
+    @Override
+    public void close() {
+        if (closingStartedAtMillis < 0L) {
+            closingStartedAtMillis = System.currentTimeMillis();
+        }
+    }
+
     private boolean selectCategory(JafuLayout layout, Click click) {
         JafuCategory[] categories = JafuCategory.values();
         for (int i = 0; i < categories.length; i++) {
             if (layout.categoryButton(i).contains(click.x(), click.y())) {
+                if (selectedCategory != categories[i]) {
+                    categoryTransitionStartedAtMillis = System.currentTimeMillis();
+                    detailTransitionStartedAtMillis = categoryTransitionStartedAtMillis;
+                    globalFontDropdownOpen = false;
+                }
                 selectedCategory = categories[i];
                 selectedModuleIndex = 0;
                 return true;
@@ -187,6 +242,10 @@ public final class JafuScreen extends Screen {
         List<JafuModule> modules = visibleModules();
         for (int i = 0; i < modules.size(); i++) {
             if (layout.moduleRow(i).contains(click.x(), click.y())) {
+                if (selectedModuleIndex != i) {
+                    detailTransitionStartedAtMillis = System.currentTimeMillis();
+                    globalFontDropdownOpen = false;
+                }
                 selectedModuleIndex = i;
                 return true;
             }
@@ -200,10 +259,14 @@ public final class JafuScreen extends Screen {
             if (layout.moduleToggle(i).contains(click.x(), click.y())) {
                 if (JafuModules.GLOBAL_SETTINGS.equals(modules.get(i).id())
                         || JafuModules.GUI_SETTINGS.equals(modules.get(i).id())) {
+                    if (selectedModuleIndex != i) {
+                        detailTransitionStartedAtMillis = System.currentTimeMillis();
+                    }
                     selectedModuleIndex = i;
                     return true;
                 }
                 modules.get(i).toggle();
+                detailTransitionStartedAtMillis = System.currentTimeMillis();
                 selectedModuleIndex = i;
                 return true;
             }
@@ -244,10 +307,12 @@ public final class JafuScreen extends Screen {
         for (int i = 0; i < categories.length; i++) {
             Rect button = layout.categoryButton(i);
             boolean active = selectedCategory == categories[i];
+            double activeProgress = animatedProgress("category:" + categories[i].name(), active);
 
-            GuiDraw.fill(context, button, active ? JafuTheme.ACCENT_SOFT : 0x00000000);
-            if (active) {
-                GuiDraw.fill(context, new Rect(button.x(), button.y(), 3, button.height()), JafuTheme.ACCENT);
+            if (activeProgress > 0.01D) {
+                GuiDraw.fill(context, button, multiplyAlpha(JafuTheme.ACCENT_SOFT, activeProgress));
+                int railHeight = (int) Math.round(button.height() * activeProgress);
+                GuiDraw.fill(context, new Rect(button.x(), button.y(), 3, railHeight), JafuTheme.ACCENT);
             }
             GuiDraw.text(
                     context,
@@ -255,7 +320,7 @@ public final class JafuScreen extends Screen {
                     categories[i].label(),
                     button.x() + 12,
                     button.y() + 8,
-                    active ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED
+                    lerpColor(JafuTheme.TEXT_MUTED, JafuTheme.TEXT, activeProgress)
             );
         }
 
@@ -270,6 +335,10 @@ public final class JafuScreen extends Screen {
     }
 
     private void drawModuleList(DrawContext context, JafuLayout layout, int mouseX, int mouseY) {
+        float transition = easeOut((float) normalized(System.currentTimeMillis() - categoryTransitionStartedAtMillis, PANEL_TRANSITION_MILLIS));
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate((1.0F - transition) * -8.0F, 0.0F);
+
         Rect panel = layout.panel();
         List<JafuModule> modules = visibleModules();
         GuiDraw.text(context, textRenderer, selectedCategory.title(), panel.x() + 166, panel.y() + 58, JafuTheme.TEXT);
@@ -287,6 +356,7 @@ public final class JafuScreen extends Screen {
                 layout.contentBottom() - 22,
                 JafuTheme.TEXT_MUTED
         );
+        context.getMatrices().popMatrix();
     }
 
     private void drawCredits(DrawContext context, JafuLayout layout) {
@@ -323,25 +393,36 @@ public final class JafuScreen extends Screen {
     ) {
         boolean selected = selectedModuleIndex == index;
         boolean hovered = rowBounds.contains(mouseX, mouseY);
-        int background = selected ? JafuTheme.SELECTED_ROW : hovered ? JafuTheme.HOVERED_ROW : JafuTheme.PANEL_LIGHT;
+        double selectedProgress = animatedProgress("module:selected:" + module.id(), selected);
+        double enabledProgress = animatedProgress("module:enabled:" + module.id(), module.enabled());
+        int restingBackground = hovered ? JafuTheme.HOVERED_ROW : JafuTheme.PANEL_LIGHT;
+        int background = lerpColor(restingBackground, JafuTheme.SELECTED_ROW, selectedProgress);
 
         GuiDraw.fill(context, rowBounds, background);
-        GuiDraw.horizontalLine(context, rowBounds.x(), rowBounds.y(), rowBounds.width(), selected ? JafuTheme.ACCENT : JafuTheme.BORDER_FAINT);
+        GuiDraw.horizontalLine(context, rowBounds.x(), rowBounds.y(), rowBounds.width(), lerpColor(JafuTheme.BORDER_FAINT, JafuTheme.ACCENT, selectedProgress));
         GuiDraw.fill(context, new Rect(rowBounds.x() + 10, rowBounds.y() + 11, 8, 8), module.color());
         GuiDraw.text(context, textRenderer, module.name(), rowBounds.x() + 28, rowBounds.y() + 8, JafuTheme.TEXT);
         GuiDraw.text(context, textRenderer, module.description(), rowBounds.x() + 28, rowBounds.y() + 21, JafuTheme.TEXT_MUTED);
-        GuiDraw.fill(context, new Rect(rowBounds.right() - 38, rowBounds.y() + 8, 30, 20), module.enabled() ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
+
+        Rect toggle = new Rect(rowBounds.right() - 38, rowBounds.y() + 8, 30, 20);
+        GuiDraw.fill(context, toggle, lerpColor(JafuTheme.CONTROL, 0xFF26445B, enabledProgress));
+        int knobX = toggle.x() + 4 + (int) Math.round(enabledProgress * (toggle.width() - 12));
+        GuiDraw.fill(context, new Rect(knobX, toggle.y() + 5, 6, 10), lerpColor(JafuTheme.TEXT_MUTED, JafuTheme.ACCENT, enabledProgress));
         GuiDraw.text(
                 context,
                 textRenderer,
                 module.enabled() ? "ON" : "OFF",
                 rowBounds.right() - 31,
                 rowBounds.y() + 14,
-                module.enabled() ? JafuTheme.GOOD : JafuTheme.TEXT_MUTED
+                lerpColor(JafuTheme.TEXT_MUTED, JafuTheme.GOOD, enabledProgress)
         );
     }
 
     private void drawModuleDetails(DrawContext context, JafuLayout layout) {
+        float transition = easeOut((float) normalized(System.currentTimeMillis() - detailTransitionStartedAtMillis, PANEL_TRANSITION_MILLIS));
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate((1.0F - transition) * 10.0F, 0.0F);
+
         Rect detailPanel = layout.detailPanel();
         JafuModule selectedModule = selectedModule();
 
@@ -375,6 +456,7 @@ public final class JafuScreen extends Screen {
             drawPreview(context, detailPanel);
         }
         drawStatus(context, layout);
+        context.getMatrices().popMatrix();
     }
 
     private void drawPowderTrackerOptions(DrawContext context, Rect detailPanel) {
@@ -386,8 +468,7 @@ public final class JafuScreen extends Screen {
             Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
             boolean visible = PowderChestSettings.INSTANCE.isVisible(option);
 
-            GuiDraw.fill(context, checkbox, visible ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
-            GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), visible ? JafuTheme.ACCENT : JafuTheme.BORDER);
+            drawCheckbox(context, checkbox, visible, "powder:" + option.id());
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
 
@@ -404,8 +485,7 @@ public final class JafuScreen extends Screen {
         Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
         boolean enabled = GuiSettings.INSTANCE.customFontEnabled();
 
-        GuiDraw.fill(context, checkbox, enabled ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
-        GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), enabled ? JafuTheme.ACCENT : JafuTheme.BORDER);
+        drawCheckbox(context, checkbox, enabled, "gui:custom_font");
         GuiDraw.text(context, textRenderer, "Custom GUI font", row.x() + 18, row.y() + 4, enabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
     }
 
@@ -423,7 +503,8 @@ public final class JafuScreen extends Screen {
         Rect slider = globalTextScaleSlider(detailPanel);
         double value = GlobalSettings.INSTANCE.textScale();
         double percent = (value - GlobalSettings.MIN_TEXT_SCALE) / (GlobalSettings.MAX_TEXT_SCALE - GlobalSettings.MIN_TEXT_SCALE);
-        int knobX = slider.x() + (int) Math.round(percent * slider.width());
+        double animatedPercent = animatedSlider("global:text_scale", percent);
+        int knobX = slider.x() + (int) Math.round(animatedPercent * slider.width());
 
         GuiDraw.text(context, textRenderer, "Text size", sizeRow.x(), sizeRow.y() + 4, JafuTheme.TEXT);
         GuiDraw.text(context, textRenderer, formatScale(value), sizeRow.right() - 34, sizeRow.y() + 4, JafuTheme.TEXT_MUTED);
@@ -431,20 +512,24 @@ public final class JafuScreen extends Screen {
         GuiDraw.fill(context, new Rect(slider.x(), slider.y(), knobX - slider.x(), slider.height()), JafuTheme.ACCENT_SOFT);
         GuiDraw.fill(context, new Rect(knobX - 2, slider.y() - 2, 4, slider.height() + 4), JafuTheme.ACCENT);
 
-        if (globalFontDropdownOpen) {
-            drawGlobalFontDropdown(context, detailPanel);
+        if (globalFontDropdownOpen || globalFontDropdownAnimation > 0.01D) {
+            drawGlobalFontDropdown(context, detailPanel, globalFontDropdownAnimation);
         }
     }
 
-    private void drawGlobalFontDropdown(DrawContext context, Rect detailPanel) {
+    private void drawGlobalFontDropdown(DrawContext context, Rect detailPanel, double progress) {
         Rect control = globalFontControl(detailPanel);
         GlobalFontOption[] options = GlobalFontOption.values();
+        float eased = easeOut((float) progress);
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate(0.0F, (1.0F - eased) * -5.0F);
         for (int i = 0; i < options.length; i++) {
             Rect row = globalFontDropdownRow(control, i);
             boolean selected = options[i] == GlobalSettings.INSTANCE.font();
-            GuiDraw.fill(context, row, selected ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
-            GuiDraw.text(context, textRenderer, options[i].label(), row.x() + 8, row.y() + 4, selected ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+            GuiDraw.fill(context, row, multiplyAlpha(selected ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL, eased));
+            GuiDraw.text(context, textRenderer, options[i].label(), row.x() + 8, row.y() + 4, multiplyAlpha(selected ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED, eased));
         }
+        context.getMatrices().popMatrix();
     }
 
     private void drawItemViewOptions(DrawContext context, Rect detailPanel) {
@@ -456,7 +541,8 @@ public final class JafuScreen extends Screen {
             Rect slider = itemViewSlider(detailPanel, i);
             double value = ItemViewSettings.INSTANCE.value(setting);
             double percent = (value - setting.min()) / (setting.max() - setting.min());
-            int knobX = slider.x() + (int) Math.round(percent * slider.width());
+            double animatedPercent = animatedSlider("item_view:" + setting.id(), percent);
+            int knobX = slider.x() + (int) Math.round(animatedPercent * slider.width());
 
             GuiDraw.text(context, textRenderer, setting.label(), row.x(), row.y() + 4, JafuTheme.TEXT);
             GuiDraw.text(context, textRenderer, formatSliderValue(setting, value), row.right() - 42, row.y() + 4, JafuTheme.TEXT_MUTED);
@@ -475,8 +561,7 @@ public final class JafuScreen extends Screen {
             Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
             boolean enabled = ChatEnhancementsSettings.INSTANCE.isEnabled(option);
 
-            GuiDraw.fill(context, checkbox, enabled ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
-            GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), enabled ? JafuTheme.ACCENT : JafuTheme.BORDER);
+            drawCheckbox(context, checkbox, enabled, "chat:" + option.id());
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, enabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
 
@@ -485,7 +570,8 @@ public final class JafuScreen extends Screen {
         double value = ChatEnhancementsSettings.INSTANCE.configuredChatScale();
         double percent = (value - ChatEnhancementsSettings.MIN_CHAT_SCALE)
                 / (ChatEnhancementsSettings.MAX_CHAT_SCALE - ChatEnhancementsSettings.MIN_CHAT_SCALE);
-        int knobX = slider.x() + (int) Math.round(percent * slider.width());
+        double animatedPercent = animatedSlider("chat:scale", percent);
+        int knobX = slider.x() + (int) Math.round(animatedPercent * slider.width());
 
         GuiDraw.text(context, textRenderer, "Chat size", sizeRow.x(), sizeRow.y() + 4, JafuTheme.TEXT);
         GuiDraw.text(context, textRenderer, formatScale(value), sizeRow.right() - 34, sizeRow.y() + 4, JafuTheme.TEXT_MUTED);
@@ -503,8 +589,7 @@ public final class JafuScreen extends Screen {
             Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
             boolean visible = SacksStashSettings.INSTANCE.isVisible(option);
 
-            GuiDraw.fill(context, checkbox, visible ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
-            GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), visible ? JafuTheme.ACCENT : JafuTheme.BORDER);
+            drawCheckbox(context, checkbox, visible, "sacks:" + option.id());
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
     }
@@ -724,6 +809,101 @@ public final class JafuScreen extends Screen {
         double value = ChatEnhancementsSettings.MIN_CHAT_SCALE
                 + percent * (ChatEnhancementsSettings.MAX_CHAT_SCALE - ChatEnhancementsSettings.MIN_CHAT_SCALE);
         ChatEnhancementsSettings.INSTANCE.setChatScale(value);
+    }
+
+    private void updateAnimationClock(long nowMillis) {
+        if (lastFrameMillis == 0L) {
+            lastFrameMillis = nowMillis;
+            animationBlend = 1.0D;
+        } else {
+            long elapsed = Math.max(0L, nowMillis - lastFrameMillis);
+            animationBlend = MathHelper.clamp(elapsed / 95.0D, 0.0D, 1.0D);
+            lastFrameMillis = nowMillis;
+        }
+
+        globalFontDropdownAnimation += ((globalFontDropdownOpen ? 1.0D : 0.0D) - globalFontDropdownAnimation) * animationBlend;
+        if (!globalFontDropdownOpen && globalFontDropdownAnimation < 0.01D) {
+            globalFontDropdownAnimation = 0.0D;
+        }
+    }
+
+    private double screenProgress(long nowMillis) {
+        if (closingStartedAtMillis >= 0L) {
+            return 1.0D - normalized(nowMillis - closingStartedAtMillis, SCREEN_ANIMATION_MILLIS);
+        }
+        return normalized(nowMillis - openedAtMillis, SCREEN_ANIMATION_MILLIS);
+    }
+
+    private double animatedProgress(String key, boolean target) {
+        double targetValue = target ? 1.0D : 0.0D;
+        double current = animatedProgress.getOrDefault(key, targetValue);
+        double next = current + (targetValue - current) * animationBlend;
+        if (Math.abs(next - targetValue) < 0.004D) {
+            next = targetValue;
+        }
+        animatedProgress.put(key, next);
+        return next;
+    }
+
+    private double animatedSlider(String key, double target) {
+        double clampedTarget = MathHelper.clamp(target, 0.0D, 1.0D);
+        double current = animatedSliders.getOrDefault(key, clampedTarget);
+        double next = current + (clampedTarget - current) * animationBlend;
+        if (Math.abs(next - clampedTarget) < 0.004D) {
+            next = clampedTarget;
+        }
+        animatedSliders.put(key, next);
+        return next;
+    }
+
+    private void drawCheckbox(DrawContext context, Rect checkbox, boolean checked, String key) {
+        double progress = animatedProgress("checkbox:" + key, checked);
+        GuiDraw.fill(context, checkbox, lerpColor(JafuTheme.CONTROL, 0xFF26445B, progress));
+
+        int markSize = (int) Math.round(6.0D * progress);
+        if (markSize > 0) {
+            int offset = (checkbox.width() - markSize) / 2;
+            GuiDraw.fill(context, new Rect(checkbox.x() + offset, checkbox.y() + offset, markSize, markSize), JafuTheme.ACCENT);
+        } else {
+            GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), JafuTheme.BORDER);
+        }
+    }
+
+    private static double normalized(long elapsedMillis, long durationMillis) {
+        if (durationMillis <= 0L) {
+            return 1.0D;
+        }
+        return MathHelper.clamp(elapsedMillis / (double) durationMillis, 0.0D, 1.0D);
+    }
+
+    private static float easeOut(float progress) {
+        float clamped = MathHelper.clamp(progress, 0.0F, 1.0F);
+        float inverse = 1.0F - clamped;
+        return 1.0F - inverse * inverse * inverse;
+    }
+
+    private static int withAlpha(int rgb, double alpha) {
+        int a = (int) Math.round(MathHelper.clamp(alpha, 0.0D, 1.0D) * 255.0D);
+        return (a << 24) | (rgb & 0x00FFFFFF);
+    }
+
+    private static int multiplyAlpha(int color, double alpha) {
+        int baseAlpha = color >>> 24;
+        int a = (int) Math.round(baseAlpha * MathHelper.clamp(alpha, 0.0D, 1.0D));
+        return (a << 24) | (color & 0x00FFFFFF);
+    }
+
+    private static int lerpColor(int from, int to, double progress) {
+        double t = MathHelper.clamp(progress, 0.0D, 1.0D);
+        int a = lerpChannel(from >>> 24, to >>> 24, t);
+        int r = lerpChannel((from >> 16) & 0xFF, (to >> 16) & 0xFF, t);
+        int g = lerpChannel((from >> 8) & 0xFF, (to >> 8) & 0xFF, t);
+        int b = lerpChannel(from & 0xFF, to & 0xFF, t);
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    private static int lerpChannel(int from, int to, double progress) {
+        return (int) Math.round(from + (to - from) * progress);
     }
 
     private static Rect powderTrackerOptionRow(Rect detailPanel, int index) {
