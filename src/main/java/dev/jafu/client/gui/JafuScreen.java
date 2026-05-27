@@ -4,6 +4,8 @@ import java.util.List;
 
 import dev.jafu.client.feature.general.chat.ChatEnhancementOption;
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
+import dev.jafu.client.feature.general.globalsettings.GlobalFontOption;
+import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
 import dev.jafu.client.feature.general.itemview.ItemViewSetting;
 import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
@@ -32,6 +34,9 @@ public final class JafuScreen extends Screen {
     private JafuCategory selectedCategory = JafuCategory.GENERAL;
     private int selectedModuleIndex;
     private ItemViewSetting draggingItemViewSetting;
+    private boolean draggingGlobalTextScale;
+    private boolean draggingChatScale;
+    private boolean globalFontDropdownOpen;
 
     public JafuScreen() {
         super(TITLE);
@@ -81,6 +86,10 @@ public final class JafuScreen extends Screen {
             return true;
         }
 
+        if (toggleGlobalSettingsOption(layout, click)) {
+            return true;
+        }
+
         if (startItemViewSlider(layout, click)) {
             return true;
         }
@@ -115,6 +124,16 @@ public final class JafuScreen extends Screen {
             return true;
         }
 
+        if (draggingGlobalTextScale) {
+            updateGlobalTextScale(JafuLayout.fromScreen(width, height), click.x());
+            return true;
+        }
+
+        if (draggingChatScale) {
+            updateChatScale(JafuLayout.fromScreen(width, height), click.x());
+            return true;
+        }
+
         return super.mouseDragged(click, deltaX, deltaY);
     }
 
@@ -122,6 +141,16 @@ public final class JafuScreen extends Screen {
     public boolean mouseReleased(Click click) {
         if (draggingItemViewSetting != null) {
             draggingItemViewSetting = null;
+            return true;
+        }
+
+        if (draggingGlobalTextScale) {
+            draggingGlobalTextScale = false;
+            return true;
+        }
+
+        if (draggingChatScale) {
+            draggingChatScale = false;
             return true;
         }
 
@@ -155,6 +184,10 @@ public final class JafuScreen extends Screen {
         List<JafuModule> modules = visibleModules();
         for (int i = 0; i < modules.size(); i++) {
             if (layout.moduleToggle(i).contains(click.x(), click.y())) {
+                if (JafuModules.GLOBAL_SETTINGS.equals(modules.get(i).id())) {
+                    selectedModuleIndex = i;
+                    return true;
+                }
                 modules.get(i).toggle();
                 selectedModuleIndex = i;
                 return true;
@@ -289,6 +322,8 @@ public final class JafuScreen extends Screen {
             drawPowderTrackerOptions(context, detailPanel);
         } else if (JafuModules.SACKS_STASH_TRACKER.equals(selectedModule.id())) {
             drawSacksStashTrackerOptions(context, detailPanel);
+        } else if (JafuModules.GLOBAL_SETTINGS.equals(selectedModule.id())) {
+            drawGlobalSettingsOptions(context, detailPanel);
         } else if (JafuModules.ITEM_VIEW.equals(selectedModule.id())) {
             drawItemViewOptions(context, detailPanel);
         } else if (JafuModules.CHAT_ENHANCEMENTS.equals(selectedModule.id())) {
@@ -313,6 +348,44 @@ public final class JafuScreen extends Screen {
             GuiDraw.fill(context, checkbox, visible ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
             GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), visible ? JafuTheme.ACCENT : JafuTheme.BORDER);
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+        }
+    }
+
+    private void drawGlobalSettingsOptions(DrawContext context, Rect detailPanel) {
+        GuiDraw.text(context, textRenderer, "Shared text settings", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
+
+        Rect fontRow = trackerOptionRow(detailPanel, 0);
+        Rect fontControl = globalFontControl(detailPanel);
+        GuiDraw.text(context, textRenderer, "Nice font", fontRow.x(), fontRow.y() + 4, JafuTheme.TEXT);
+        GuiDraw.fill(context, fontControl, JafuTheme.CONTROL);
+        GuiDraw.text(context, textRenderer, GlobalSettings.INSTANCE.font().label(), fontControl.x() + 8, fontControl.y() + 4, JafuTheme.ACCENT);
+        GuiDraw.text(context, textRenderer, "v", fontControl.right() - 10, fontControl.y() + 4, JafuTheme.TEXT_MUTED);
+
+        Rect sizeRow = trackerOptionRow(detailPanel, 1);
+        Rect slider = globalTextScaleSlider(detailPanel);
+        double value = GlobalSettings.INSTANCE.textScale();
+        double percent = (value - GlobalSettings.MIN_TEXT_SCALE) / (GlobalSettings.MAX_TEXT_SCALE - GlobalSettings.MIN_TEXT_SCALE);
+        int knobX = slider.x() + (int) Math.round(percent * slider.width());
+
+        GuiDraw.text(context, textRenderer, "Text size", sizeRow.x(), sizeRow.y() + 4, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, formatScale(value), sizeRow.right() - 34, sizeRow.y() + 4, JafuTheme.TEXT_MUTED);
+        GuiDraw.fill(context, slider, JafuTheme.CONTROL);
+        GuiDraw.fill(context, new Rect(slider.x(), slider.y(), knobX - slider.x(), slider.height()), JafuTheme.ACCENT_SOFT);
+        GuiDraw.fill(context, new Rect(knobX - 2, slider.y() - 2, 4, slider.height() + 4), JafuTheme.ACCENT);
+
+        if (globalFontDropdownOpen) {
+            drawGlobalFontDropdown(context, detailPanel);
+        }
+    }
+
+    private void drawGlobalFontDropdown(DrawContext context, Rect detailPanel) {
+        Rect control = globalFontControl(detailPanel);
+        GlobalFontOption[] options = GlobalFontOption.values();
+        for (int i = 0; i < options.length; i++) {
+            Rect row = globalFontDropdownRow(control, i);
+            boolean selected = options[i] == GlobalSettings.INSTANCE.font();
+            GuiDraw.fill(context, row, selected ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
+            GuiDraw.text(context, textRenderer, options[i].label(), row.x() + 8, row.y() + 4, selected ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
     }
 
@@ -348,6 +421,19 @@ public final class JafuScreen extends Screen {
             GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), enabled ? JafuTheme.ACCENT : JafuTheme.BORDER);
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, enabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
+
+        Rect sizeRow = chatScaleRow(detailPanel);
+        Rect slider = chatScaleSlider(detailPanel);
+        double value = ChatEnhancementsSettings.INSTANCE.configuredChatScale();
+        double percent = (value - ChatEnhancementsSettings.MIN_CHAT_SCALE)
+                / (ChatEnhancementsSettings.MAX_CHAT_SCALE - ChatEnhancementsSettings.MIN_CHAT_SCALE);
+        int knobX = slider.x() + (int) Math.round(percent * slider.width());
+
+        GuiDraw.text(context, textRenderer, "Chat size", sizeRow.x(), sizeRow.y() + 4, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, formatScale(value), sizeRow.right() - 34, sizeRow.y() + 4, JafuTheme.TEXT_MUTED);
+        GuiDraw.fill(context, slider, JafuTheme.CONTROL);
+        GuiDraw.fill(context, new Rect(slider.x(), slider.y(), knobX - slider.x(), slider.height()), JafuTheme.ACCENT_SOFT);
+        GuiDraw.fill(context, new Rect(knobX - 2, slider.y() - 2, 4, slider.height() + 4), JafuTheme.ACCENT);
     }
 
     private void drawSacksStashTrackerOptions(DrawContext context, Rect detailPanel) {
@@ -447,6 +533,40 @@ public final class JafuScreen extends Screen {
         return false;
     }
 
+    private boolean toggleGlobalSettingsOption(JafuLayout layout, Click click) {
+        JafuModule selectedModule = selectedModule();
+        if (!JafuModules.GLOBAL_SETTINGS.equals(selectedModule.id())) {
+            globalFontDropdownOpen = false;
+            return false;
+        }
+
+        Rect detailPanel = layout.detailPanel();
+        Rect fontControl = globalFontControl(detailPanel);
+        if (globalFontDropdownOpen) {
+            GlobalFontOption[] options = GlobalFontOption.values();
+            for (int i = 0; i < options.length; i++) {
+                if (globalFontDropdownRow(fontControl, i).contains(click.x(), click.y())) {
+                    GlobalSettings.INSTANCE.setFont(options[i]);
+                    globalFontDropdownOpen = false;
+                    return true;
+                }
+            }
+        }
+
+        if (fontControl.contains(click.x(), click.y())) {
+            globalFontDropdownOpen = !globalFontDropdownOpen;
+            return true;
+        }
+
+        globalFontDropdownOpen = false;
+        if (trackerOptionRow(detailPanel, 1).contains(click.x(), click.y())) {
+            draggingGlobalTextScale = true;
+            updateGlobalTextScale(layout, click.x());
+            return true;
+        }
+        return false;
+    }
+
     private boolean startItemViewSlider(JafuLayout layout, Click click) {
         JafuModule selectedModule = selectedModule();
         if (!JafuModules.ITEM_VIEW.equals(selectedModule.id())) {
@@ -480,6 +600,12 @@ public final class JafuScreen extends Screen {
                 return true;
             }
         }
+
+        if (chatScaleRow(detailPanel).contains(click.x(), click.y())) {
+            draggingChatScale = true;
+            updateChatScale(layout, click.x());
+            return true;
+        }
         return false;
     }
 
@@ -505,6 +631,22 @@ public final class JafuScreen extends Screen {
         ItemViewSettings.INSTANCE.setValue(setting, value);
     }
 
+    private void updateGlobalTextScale(JafuLayout layout, double mouseX) {
+        Rect slider = globalTextScaleSlider(layout.detailPanel());
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = GlobalSettings.MIN_TEXT_SCALE
+                + percent * (GlobalSettings.MAX_TEXT_SCALE - GlobalSettings.MIN_TEXT_SCALE);
+        GlobalSettings.INSTANCE.setTextScale(value);
+    }
+
+    private void updateChatScale(JafuLayout layout, double mouseX) {
+        Rect slider = chatScaleSlider(layout.detailPanel());
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = ChatEnhancementsSettings.MIN_CHAT_SCALE
+                + percent * (ChatEnhancementsSettings.MAX_CHAT_SCALE - ChatEnhancementsSettings.MIN_CHAT_SCALE);
+        ChatEnhancementsSettings.INSTANCE.setChatScale(value);
+    }
+
     private static Rect powderTrackerOptionRow(Rect detailPanel, int index) {
         return trackerOptionRow(detailPanel, index);
     }
@@ -518,10 +660,37 @@ public final class JafuScreen extends Screen {
         return new Rect(row.x() + 48, row.y() + 7, Math.max(30, row.width() - 96), 4);
     }
 
+    private static Rect globalFontControl(Rect detailPanel) {
+        Rect row = trackerOptionRow(detailPanel, 0);
+        return new Rect(row.right() - 82, row.y(), 82, 16);
+    }
+
+    private static Rect globalFontDropdownRow(Rect control, int index) {
+        return new Rect(control.x(), control.bottom() + 2 + index * 16, control.width(), 16);
+    }
+
+    private static Rect globalTextScaleSlider(Rect detailPanel) {
+        Rect row = trackerOptionRow(detailPanel, 1);
+        return new Rect(row.x() + 62, row.y() + 7, Math.max(30, row.width() - 108), 4);
+    }
+
+    private static Rect chatScaleRow(Rect detailPanel) {
+        return trackerOptionRow(detailPanel, ChatEnhancementOption.all().size() + 1);
+    }
+
+    private static Rect chatScaleSlider(Rect detailPanel) {
+        Rect row = chatScaleRow(detailPanel);
+        return new Rect(row.x() + 62, row.y() + 7, Math.max(30, row.width() - 108), 4);
+    }
+
     private static String formatSliderValue(ItemViewSetting setting, double value) {
         if (setting == ItemViewSetting.SPEED) {
             return String.format("%.2f", value);
         }
         return Integer.toString((int) Math.round(value));
+    }
+
+    private static String formatScale(double value) {
+        return String.format("%.2f", value);
     }
 }

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
+import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
 import dev.jafu.client.gui.CleanFont;
 import dev.jafu.client.gui.JafuTheme;
 import dev.jafu.client.gui.util.GuiDraw;
@@ -21,7 +22,7 @@ import net.minecraft.client.render.RenderTickCounter;
 
 public final class PowderChestHud {
     private static final int WIDTH = 244;
-    private static final int LINE_HEIGHT = 10;
+    private static final int BASE_LINE_HEIGHT = 10;
     private static final int MAX_DROPS = 6;
     private static final long ANIMATION_MILLIS = 240L;
 
@@ -46,7 +47,10 @@ public final class PowderChestHud {
         PowderChestSnapshot snapshot = tracker.snapshot();
         List<PowderChestDrop> drops = snapshot.topDrops(MAX_DROPS);
         boolean animated = PowderChestSettings.INSTANCE.isVisible(PowderChestStatOption.SMOOTH_ITEM_ANIMATION);
-        int height = 50 + PowderChestSettings.INSTANCE.visibleStatCount() * LINE_HEIGHT + drops.size() * LINE_HEIGHT;
+        int lineHeight = lineHeight();
+        int headerGap = Math.max(12, lineHeight + 2);
+        int dropNameWidth = scaledTextWidthLimit(WIDTH - 76);
+        int height = 14 + headerGap * 3 + PowderChestSettings.INSTANCE.visibleStatCount() * lineHeight + drops.size() * lineHeight;
         Rect bounds = HudLayoutStore.INSTANCE.bounds(
                 JafuHudElements.POWDER_CHEST_TRACKER,
                 WIDTH,
@@ -59,13 +63,13 @@ public final class PowderChestHud {
 
         GuiDraw.fill(context, bounds, 0xAA101218);
         drawText(context, textRenderer, "Powder Chest Tracker", x, y, 0xFFFFFF55);
-        drawText(context, textRenderer, "Chests:", x, y + 12, JafuTheme.TEXT_MUTED);
-        drawText(context, textRenderer, Integer.toString(snapshot.chests()), x + 62, y + 12, JafuTheme.GOOD);
-        drawText(context, textRenderer, "Gemstone Powder:", x, y + 24, JafuTheme.TEXT_MUTED);
-        drawText(context, textRenderer, format(snapshot.gemstonePowder()), x + 116, y + 24, 0xFFFFAA00);
+        drawText(context, textRenderer, "Chests:", x, y + headerGap, JafuTheme.TEXT_MUTED);
+        drawText(context, textRenderer, Integer.toString(snapshot.chests()), x + 62, y + headerGap, JafuTheme.GOOD);
+        drawText(context, textRenderer, "Gemstone Powder:", x, y + headerGap * 2, JafuTheme.TEXT_MUTED);
+        drawText(context, textRenderer, format(snapshot.gemstonePowder()), x + 116, y + headerGap * 2, 0xFFFFAA00);
 
-        int rowY = y + 40;
-        rowY = drawStats(context, textRenderer, snapshot.stats(), x, rowY);
+        int rowY = y + headerGap * 3 + 4;
+        rowY = drawStats(context, textRenderer, snapshot.stats(), x, rowY, lineHeight);
         Set<String> visibleDropNames = new HashSet<>();
         for (PowderChestDrop drop : drops) {
             visibleDropNames.add(drop.name());
@@ -74,8 +78,8 @@ public final class PowderChestHud {
             long amount = animated ? Math.round(animatedValue(animatedAmounts, drop.name(), drop.amount(), animationStep)) : drop.amount();
             GuiDraw.fill(context, new Rect(x, (int) Math.round(drawRowY) + 2, 3, 6), dropColor);
             drawText(context, textRenderer, format(amount), x + 8, (int) Math.round(drawRowY), dim(dropColor));
-            drawText(context, textRenderer, trimToWidth(textRenderer, drop.name(), bounds.width() - 76), x + 66, (int) Math.round(drawRowY), dropColor);
-            rowY += LINE_HEIGHT;
+            drawText(context, textRenderer, trimToWidth(textRenderer, drop.name(), dropNameWidth), x + 66, (int) Math.round(drawRowY), dropColor);
+            rowY += lineHeight;
         }
         animatedAmounts.keySet().removeIf(name -> !visibleDropNames.contains(name));
         animatedRows.keySet().removeIf(name -> !visibleDropNames.contains(name));
@@ -121,13 +125,14 @@ public final class PowderChestHud {
             TextRenderer textRenderer,
             PowderChestSessionStats stats,
             int x,
-            int rowY
+            int rowY,
+            int lineHeight
     ) {
-        rowY = drawStat(context, textRenderer, PowderChestStatOption.SESSION_TIMER, "Time", formatDuration(stats.elapsedMillis()), x, rowY);
-        rowY = drawStat(context, textRenderer, PowderChestStatOption.CHESTS_PER_HOUR, "Chests/hr", String.format("%.1f", stats.chestsPerHour()), x, rowY);
-        rowY = drawStat(context, textRenderer, PowderChestStatOption.GEMSTONE_POWDER_PER_HOUR, "Powder/hr", format(stats.gemstonePowderPerHour()), x, rowY);
-        rowY = drawStat(context, textRenderer, PowderChestStatOption.AVERAGE_POWDER_PER_CHEST, "Avg/chest", format(stats.averageGemstonePowderPerChest()), x, rowY);
-        return drawStat(context, textRenderer, PowderChestStatOption.BEST_CHEST, "Best chest", format(stats.bestChestGemstonePowder()), x, rowY);
+        rowY = drawStat(context, textRenderer, PowderChestStatOption.SESSION_TIMER, "Time", formatDuration(stats.elapsedMillis()), x, rowY, lineHeight);
+        rowY = drawStat(context, textRenderer, PowderChestStatOption.CHESTS_PER_HOUR, "Chests/hr", String.format("%.1f", stats.chestsPerHour()), x, rowY, lineHeight);
+        rowY = drawStat(context, textRenderer, PowderChestStatOption.GEMSTONE_POWDER_PER_HOUR, "Powder/hr", format(stats.gemstonePowderPerHour()), x, rowY, lineHeight);
+        rowY = drawStat(context, textRenderer, PowderChestStatOption.AVERAGE_POWDER_PER_CHEST, "Avg/chest", format(stats.averageGemstonePowderPerChest()), x, rowY, lineHeight);
+        return drawStat(context, textRenderer, PowderChestStatOption.BEST_CHEST, "Best chest", format(stats.bestChestGemstonePowder()), x, rowY, lineHeight);
     }
 
     private static int drawStat(
@@ -137,7 +142,8 @@ public final class PowderChestHud {
             String label,
             String value,
             int x,
-            int rowY
+            int rowY,
+            int lineHeight
     ) {
         if (!PowderChestSettings.INSTANCE.isVisible(option)) {
             return rowY;
@@ -145,7 +151,7 @@ public final class PowderChestHud {
 
         drawText(context, textRenderer, label + ":", x, rowY, JafuTheme.TEXT_MUTED);
         drawText(context, textRenderer, value, x + 82, rowY, JafuTheme.GOOD);
-        return rowY + LINE_HEIGHT;
+        return rowY + lineHeight;
     }
 
     private static void drawText(DrawContext context, TextRenderer textRenderer, String text, int x, int y, int color) {
@@ -154,6 +160,20 @@ public final class PowderChestHud {
             return;
         }
         GuiDraw.text(context, textRenderer, text, x, y, color);
+    }
+
+    private static int lineHeight() {
+        if (!ChatEnhancementsSettings.INSTANCE.cleanFontEnabled()) {
+            return BASE_LINE_HEIGHT;
+        }
+        return Math.max(BASE_LINE_HEIGHT, (int) Math.ceil(BASE_LINE_HEIGHT * GlobalSettings.INSTANCE.textScale()));
+    }
+
+    private static int scaledTextWidthLimit(int width) {
+        if (!ChatEnhancementsSettings.INSTANCE.cleanFontEnabled()) {
+            return width;
+        }
+        return Math.max(40, (int) Math.floor(width / GlobalSettings.INSTANCE.textScale()));
     }
 
     private static String formatDuration(long elapsedMillis) {

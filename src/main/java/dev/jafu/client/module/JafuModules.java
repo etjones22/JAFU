@@ -11,8 +11,10 @@ public final class JafuModules {
     public static final String ITEM_VIEW = "item_view";
     public static final String CHAT_ENHANCEMENTS = "chat_enhancements";
     public static final String AUTO_UPDATER = "auto_updater";
+    public static final String GLOBAL_SETTINGS = "global_settings";
 
     private static final List<JafuModule> MODULES = List.of(
+            new JafuModule(GLOBAL_SETTINGS, JafuCategory.GENERAL, "Global settings", "Shared font and text defaults", true, JafuTheme.ACCENT),
             new JafuModule(FAST_ETHERWARP_HELPER, JafuCategory.GENERAL, "Fast etherwarp helper", "Shows AOTE/AOTV held-use timing without macros", false, JafuTheme.ACCENT),
             new JafuModule(ITEM_VIEW, JafuCategory.GENERAL, "Item view", "Customizes the first-person held item model", false, JafuTheme.WARN),
             new JafuModule(CHAT_ENHANCEMENTS, JafuCategory.GENERAL, "Chat enhancements", "Smooth chat and clean typography", false, JafuTheme.GOOD),
