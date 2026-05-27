@@ -369,25 +369,78 @@ public final class JafuScreen extends Screen {
     private void drawCredits(DrawContext context, JafuLayout layout) {
         Rect panel = layout.panel();
         Rect creditsPanel = new Rect(panel.x() + 166, panel.y() + 72, panel.right() - panel.x() - 184, panel.height() - 116);
+        long nowMillis = System.currentTimeMillis();
 
         GuiDraw.text(context, textRenderer, selectedCategory.title(), panel.x() + 166, panel.y() + 58, JafuTheme.TEXT);
         GuiDraw.fill(context, creditsPanel, JafuTheme.PANEL_LIGHT);
         GuiDraw.horizontalLine(context, creditsPanel.x(), creditsPanel.y(), creditsPanel.width(), JafuTheme.ACCENT);
+        drawCreditsPulseBar(context, new Rect(creditsPanel.x() + 18, creditsPanel.y() + 20, creditsPanel.width() - 36, 3), nowMillis);
 
-        int textX = creditsPanel.x() + 18;
-        int textY = creditsPanel.y() + 28;
-        String prefix = "Developed with ";
-        String suffix = " by ";
-        String name = "Chorey";
-        int x = textX;
+        int firstLineY = creditsPanel.y() + 42;
+        int firstLineWidth = textRenderer.getWidth("Made with ") + textRenderer.getWidth("ChatGPT");
+        int firstLineX = creditsPanel.x() + (creditsPanel.width() - firstLineWidth) / 2;
+        GuiDraw.text(context, textRenderer, "Made with ", firstLineX, firstLineY, JafuTheme.TEXT_MUTED);
+        drawAnimatedCreditsWord(
+                context,
+                "ChatGPT",
+                firstLineX + textRenderer.getWidth("Made with "),
+                firstLineY,
+                nowMillis,
+                JafuTheme.ACCENT,
+                JafuTheme.GOOD
+        );
 
-        GuiDraw.text(context, textRenderer, prefix, x, textY, JafuTheme.TEXT_MUTED);
-        x += textRenderer.getWidth(prefix);
-        GuiDraw.text(context, textRenderer, "\u2665", x, textY, JafuTheme.CLOSE_TEXT_HOVER);
-        x += textRenderer.getWidth("\u2665");
-        GuiDraw.text(context, textRenderer, suffix, x, textY, JafuTheme.TEXT_MUTED);
-        x += textRenderer.getWidth(suffix);
-        GuiDraw.text(context, textRenderer, name, x, textY, JafuTheme.ACCENT);
+        int secondLineY = firstLineY + 34;
+        int secondLineWidth = textRenderer.getWidth("Mashed together by ") + textRenderer.getWidth("Chorey");
+        int secondLineX = creditsPanel.x() + (creditsPanel.width() - secondLineWidth) / 2;
+        GuiDraw.text(context, textRenderer, "Mashed together by ", secondLineX, secondLineY, JafuTheme.TEXT_MUTED);
+        drawAnimatedCreditsWord(
+                context,
+                "Chorey",
+                secondLineX + textRenderer.getWidth("Mashed together by "),
+                secondLineY,
+                nowMillis + 420L,
+                JafuTheme.WARN,
+                JafuTheme.ACCENT
+        );
+
+        drawCreditsPulseBar(context, new Rect(creditsPanel.x() + 48, secondLineY + 22, creditsPanel.width() - 96, 2), nowMillis + 700L);
+    }
+
+    private void drawCreditsPulseBar(DrawContext context, Rect bar, long nowMillis) {
+        GuiDraw.fill(context, bar, multiplyAlpha(JafuTheme.CONTROL, 0.78D));
+        GuiDraw.fill(context, new Rect(bar.x(), bar.y(), bar.width(), 1), multiplyAlpha(JafuTheme.ACCENT_SOFT, 0.7D));
+
+        int sweepWidth = Math.max(18, bar.width() / 4);
+        double sweep = (nowMillis % 1500L) / 1500.0D;
+        int sweepX = bar.x() - sweepWidth + (int) Math.round((bar.width() + sweepWidth) * sweep);
+        int start = Math.max(bar.x(), sweepX);
+        int end = Math.min(bar.right(), sweepX + sweepWidth);
+        if (end > start) {
+            double colorProgress = (Math.sin(nowMillis / 230.0D) + 1.0D) * 0.5D;
+            GuiDraw.fill(context, new Rect(start, bar.y(), end - start, bar.height()), lerpColor(JafuTheme.ACCENT, JafuTheme.GOOD, colorProgress));
+        }
+    }
+
+    private int drawAnimatedCreditsWord(
+            DrawContext context,
+            String word,
+            int x,
+            int y,
+            long nowMillis,
+            int fromColor,
+            int toColor
+    ) {
+        int cursorX = x;
+        for (int i = 0; i < word.length(); i++) {
+            String character = word.substring(i, i + 1);
+            double wave = (Math.sin(nowMillis / 160.0D + i * 0.72D) + 1.0D) * 0.5D;
+            int color = lerpColor(fromColor, toColor, wave);
+            int offsetY = (int) Math.round((wave - 0.5D) * 3.0D);
+            GuiDraw.text(context, textRenderer, character, cursorX, y + offsetY, color);
+            cursorX += textRenderer.getWidth(character);
+        }
+        return cursorX - x;
     }
 
     private void drawModuleRow(
