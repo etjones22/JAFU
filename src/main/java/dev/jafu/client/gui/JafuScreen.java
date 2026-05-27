@@ -405,7 +405,21 @@ public final class JafuScreen extends Screen {
                 JafuTheme.ACCENT
         );
 
-        drawCreditsPulseBar(context, new Rect(creditsPanel.x() + 48, secondLineY + 22, creditsPanel.width() - 96, 2), nowMillis + 700L);
+        int thirdLineY = secondLineY + 32;
+        int thirdLineWidth = textRenderer.getWidth("All hail the ") + textRenderer.getWidth("LLM's");
+        int thirdLineX = creditsPanel.x() + (creditsPanel.width() - thirdLineWidth) / 2;
+        GuiDraw.text(context, textRenderer, "All hail the ", thirdLineX, thirdLineY, JafuTheme.TEXT_MUTED);
+        drawAnimatedCreditsWord(
+                context,
+                "LLM's",
+                thirdLineX + textRenderer.getWidth("All hail the "),
+                thirdLineY,
+                nowMillis + 840L,
+                JafuTheme.GOOD,
+                JafuTheme.WARN
+        );
+
+        drawCreditsPulseBar(context, new Rect(creditsPanel.x() + 48, thirdLineY + 22, creditsPanel.width() - 96, 2), nowMillis + 700L);
     }
 
     private void drawCreditsPulseBar(DrawContext context, Rect bar, long nowMillis) {
