@@ -29,8 +29,11 @@ public final class JafuCommands {
                 })).then(ClientCommandManager.literal("stable").executes(context -> {
                     AutoUpdater.setChannel(UpdateChannel.STABLE, true);
                     return 1;
+                })).then(ClientCommandManager.literal("snapshot").executes(context -> {
+                    AutoUpdater.setChannel(UpdateChannel.SNAPSHOT, true);
+                    return 1;
                 })).then(ClientCommandManager.literal("dev").executes(context -> {
-                    AutoUpdater.setChannel(UpdateChannel.DEV, true);
+                    AutoUpdater.setChannel(UpdateChannel.SNAPSHOT, true);
                     return 1;
                 })))));
     }

@@ -378,6 +378,7 @@ public final class JafuScreen extends Screen {
 
         GuiDraw.text(context, textRenderer, "Commands", detailPanel.x() + 16, detailPanel.y() + 120, JafuTheme.TEXT_MUTED);
         GuiDraw.text(context, textRenderer, "/jafu update check", detailPanel.x() + 16, detailPanel.y() + 140, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, "/jafu update snapshot", detailPanel.x() + 16, detailPanel.y() + 158, JafuTheme.TEXT_MUTED);
     }
 
     private void drawPreview(DrawContext context, Rect detailPanel) {

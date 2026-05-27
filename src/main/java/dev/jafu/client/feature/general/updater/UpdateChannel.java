@@ -2,7 +2,7 @@ package dev.jafu.client.feature.general.updater;
 
 public enum UpdateChannel {
     STABLE("stable", "Stable"),
-    DEV("dev", "Dev");
+    SNAPSHOT("snapshot", "Snapshot");
 
     private final String id;
     private final String label;
@@ -21,10 +21,14 @@ public enum UpdateChannel {
     }
 
     public UpdateChannel next() {
-        return this == STABLE ? DEV : STABLE;
+        return this == STABLE ? SNAPSHOT : STABLE;
     }
 
     public static UpdateChannel fromId(String id) {
+        if ("dev".equalsIgnoreCase(id)) {
+            return SNAPSHOT;
+        }
+
         for (UpdateChannel channel : values()) {
             if (channel.id.equalsIgnoreCase(id)) {
                 return channel;

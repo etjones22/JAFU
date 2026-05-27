@@ -41,7 +41,8 @@ import net.minecraft.text.Text;
 public final class AutoUpdater {
     private static final String REPOSITORY = "etjones22/JAFU";
     private static final String USER_AGENT = "JAFU-Updater";
-    private static final String DEV_TAG = "dev-latest";
+    private static final String SNAPSHOT_TAG = "snapshot-latest";
+    private static final String LEGACY_DEV_TAG = "dev-latest";
     private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(20L);
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(HTTP_TIMEOUT)
@@ -155,10 +156,14 @@ public final class AutoUpdater {
     }
 
     private static ReleaseInfo fetchRelease(UpdateChannel channel) throws IOException, InterruptedException {
-        String endpoint = channel == UpdateChannel.DEV
-                ? "https://api.github.com/repos/" + REPOSITORY + "/releases/tags/" + DEV_TAG
+        String endpoint = channel == UpdateChannel.SNAPSHOT
+                ? "https://api.github.com/repos/" + REPOSITORY + "/releases/tags/" + SNAPSHOT_TAG
                 : "https://api.github.com/repos/" + REPOSITORY + "/releases/latest";
         HttpResponse<String> response = HTTP_CLIENT.send(request(endpoint).build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() == 404 && channel == UpdateChannel.SNAPSHOT) {
+            endpoint = "https://api.github.com/repos/" + REPOSITORY + "/releases/tags/" + LEGACY_DEV_TAG;
+            response = HTTP_CLIENT.send(request(endpoint).build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        }
         if (response.statusCode() == 404) {
             return null;
         }
@@ -198,7 +203,7 @@ public final class AutoUpdater {
                 continue;
             }
 
-            if (channel == UpdateChannel.DEV && "jafu-dev.jar".equals(lowerName)) {
+            if (channel == UpdateChannel.SNAPSHOT && ("jafu-snapshot.jar".equals(lowerName) || "jafu-dev.jar".equals(lowerName))) {
                 return asset;
             }
             if (channel == UpdateChannel.STABLE && lowerName.startsWith("jafu-")) {
@@ -295,7 +300,7 @@ public final class AutoUpdater {
             return true;
         }
         if (coreComparison == 0) {
-            return channel == UpdateChannel.DEV || !candidateVersion.equals(currentVersion);
+            return channel == UpdateChannel.SNAPSHOT || !candidateVersion.equals(currentVersion);
         }
         return false;
     }
