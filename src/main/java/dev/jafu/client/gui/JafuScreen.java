@@ -317,7 +317,7 @@ public final class JafuScreen extends Screen {
     }
 
     private void drawItemViewOptions(DrawContext context, Rect detailPanel) {
-        GuiDraw.text(context, textRenderer, "Item view", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
+        GuiDraw.text(context, textRenderer, "Held item model", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
         List<ItemViewSetting> settings = ItemViewSetting.all();
         for (int i = 0; i < settings.size(); i++) {
             ItemViewSetting setting = settings.get(i);

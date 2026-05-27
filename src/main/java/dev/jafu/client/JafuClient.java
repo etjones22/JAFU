@@ -2,7 +2,6 @@ package dev.jafu.client;
 
 import dev.jafu.client.command.JafuCommands;
 import dev.jafu.client.feature.general.etherwarp.EtherwarpFeature;
-import dev.jafu.client.feature.general.itemview.ItemViewFeature;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.mining.powder.PowderChestFeature;
 import dev.jafu.client.feature.mining.sacks.SacksStashFeature;
@@ -15,7 +14,6 @@ public final class JafuClient implements ClientModInitializer {
     public void onInitializeClient() {
         JafuCommands.register();
         EtherwarpFeature.register();
-        ItemViewFeature.register();
         PowderChestFeature.register();
         SacksStashFeature.register();
         AutoUpdater.register();

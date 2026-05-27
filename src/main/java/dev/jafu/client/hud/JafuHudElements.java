@@ -41,23 +41,10 @@ public final class JafuHudElements {
             66
     );
 
-    public static final JafuHudElement ITEM_VIEW = new JafuHudElement(
-            JafuModules.ITEM_VIEW,
-            JafuModules.ITEM_VIEW,
-            "Item View",
-            260,
-            14,
-            150,
-            150,
-            72,
-            72
-    );
-
     private static final List<JafuHudElement> ELEMENTS = List.of(
             POWDER_CHEST_TRACKER,
             ETHERWARP_HELPER,
-            SACKS_STASH_TRACKER,
-            ITEM_VIEW
+            SACKS_STASH_TRACKER
     );
 
     private JafuHudElements() {
