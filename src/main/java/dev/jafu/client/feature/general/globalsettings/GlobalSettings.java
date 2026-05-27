@@ -18,6 +18,7 @@ public final class GlobalSettings {
 
     private final Path configPath = FabricLoader.getInstance().getConfigDir().resolve("jafu-global.properties");
     private GlobalFontOption font = GlobalFontOption.CLEAN;
+    private ClickGuiVersion clickGuiVersion = ClickGuiVersion.V1;
     private double textScale = 1.0D;
 
     private GlobalSettings() {
@@ -37,6 +38,15 @@ public final class GlobalSettings {
 
     public void setFont(GlobalFontOption font) {
         this.font = font;
+        save();
+    }
+
+    public ClickGuiVersion clickGuiVersion() {
+        return clickGuiVersion;
+    }
+
+    public void setClickGuiVersion(ClickGuiVersion clickGuiVersion) {
+        this.clickGuiVersion = clickGuiVersion;
         save();
     }
 
@@ -62,6 +72,7 @@ public final class GlobalSettings {
         }
 
         font = GlobalFontOption.fromId(properties.getProperty("font", font.id()));
+        clickGuiVersion = ClickGuiVersion.fromId(properties.getProperty("click_gui_version", clickGuiVersion.id()));
         textScale = readDouble(properties, "text_scale", textScale);
         textScale = snap(textScale, MIN_TEXT_SCALE, MAX_TEXT_SCALE, TEXT_SCALE_STEP);
     }
@@ -69,6 +80,7 @@ public final class GlobalSettings {
     private void save() {
         Properties properties = new Properties();
         properties.setProperty("font", font.id());
+        properties.setProperty("click_gui_version", clickGuiVersion.id());
         properties.setProperty("text_scale", Double.toString(textScale));
 
         try {

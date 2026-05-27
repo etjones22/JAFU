@@ -6,6 +6,7 @@ import java.util.Map;
 
 import dev.jafu.client.feature.general.chat.ChatEnhancementOption;
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
+import dev.jafu.client.feature.general.globalsettings.ClickGuiVersion;
 import dev.jafu.client.feature.general.globalsettings.GlobalFontOption;
 import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
 import dev.jafu.client.feature.general.guisettings.GuiSettings;
@@ -32,7 +33,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
 public final class JafuScreen extends Screen {
-    private static final Text TITLE = Text.literal("JAFU");
+    private static final Text TITLE = Text.literal("JAFU V1");
     private static final String SUBTITLE = "Just A Few Updates";
     private static final String COMMAND = "/jafu";
     private static final String MOD_HIDER_TOOLTIP = "Blocks ModAnnouncer packets that mods like Firament send.";
@@ -590,9 +591,21 @@ public final class JafuScreen extends Screen {
         GuiDraw.fill(context, new Rect(slider.x(), slider.y(), knobX - slider.x(), slider.height()), JafuTheme.ACCENT_SOFT);
         GuiDraw.fill(context, new Rect(knobX - 2, slider.y() - 2, 4, slider.height() + 4), JafuTheme.ACCENT);
 
+        Rect clickGuiRow = trackerOptionRow(detailPanel, 2);
+        GuiDraw.text(context, textRenderer, "ClickGUI", clickGuiRow.x(), clickGuiRow.y() + 4, JafuTheme.TEXT);
+        drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V1);
+        drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V2);
+
         if (globalFontDropdownOpen || globalFontDropdownAnimation > 0.01D) {
             drawGlobalFontDropdown(context, detailPanel, globalFontDropdownAnimation);
         }
+    }
+
+    private void drawClickGuiVersionButton(DrawContext context, Rect detailPanel, ClickGuiVersion version) {
+        Rect button = clickGuiVersionButton(detailPanel, version);
+        boolean selected = GlobalSettings.INSTANCE.clickGuiVersion() == version;
+        GuiDraw.fill(context, button, selected ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
+        GuiDraw.text(context, textRenderer, version.label(), button.x() + 10, button.y() + 4, selected ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
     }
 
     private void drawGlobalFontDropdown(DrawContext context, Rect detailPanel, double progress) {
@@ -819,6 +832,14 @@ public final class JafuScreen extends Screen {
         if (trackerOptionRow(detailPanel, 1).contains(click.x(), click.y())) {
             draggingGlobalTextScale = true;
             updateGlobalTextScale(layout, click.x());
+            return true;
+        }
+        if (clickGuiVersionButton(detailPanel, ClickGuiVersion.V1).contains(click.x(), click.y())) {
+            JafuScreens.switchTo(ClickGuiVersion.V1);
+            return true;
+        }
+        if (clickGuiVersionButton(detailPanel, ClickGuiVersion.V2).contains(click.x(), click.y())) {
+            JafuScreens.switchTo(ClickGuiVersion.V2);
             return true;
         }
         return false;
@@ -1051,6 +1072,13 @@ public final class JafuScreen extends Screen {
     private static Rect globalTextScaleSlider(Rect detailPanel) {
         Rect row = trackerOptionRow(detailPanel, 1);
         return new Rect(row.x() + 62, row.y() + 7, Math.max(30, row.width() - 108), 4);
+    }
+
+    private static Rect clickGuiVersionButton(Rect detailPanel, ClickGuiVersion version) {
+        Rect row = trackerOptionRow(detailPanel, 2);
+        int width = 34;
+        int x = row.right() - width * 2 + version.ordinal() * width;
+        return new Rect(x, row.y(), width, 16);
     }
 
     private static Rect chatScaleRow(Rect detailPanel) {

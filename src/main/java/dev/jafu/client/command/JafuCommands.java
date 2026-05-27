@@ -2,8 +2,8 @@ package dev.jafu.client.command;
 
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.general.updater.UpdateChannel;
-import dev.jafu.client.gui.JafuScreen;
 import dev.jafu.client.gui.HudLayoutScreen;
+import dev.jafu.client.gui.JafuScreens;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.client.MinecraftClient;
@@ -39,8 +39,7 @@ public final class JafuCommands {
     }
 
     private static void openMenu() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        client.execute(() -> client.setScreen(new JafuScreen()));
+        JafuScreens.openSelected();
     }
 
     private static void openLayout() {
