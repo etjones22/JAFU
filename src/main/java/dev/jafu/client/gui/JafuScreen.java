@@ -6,6 +6,7 @@ import dev.jafu.client.feature.general.chat.ChatEnhancementOption;
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.feature.general.globalsettings.GlobalFontOption;
 import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
+import dev.jafu.client.feature.general.guisettings.GuiSettings;
 import dev.jafu.client.feature.general.itemview.ItemViewSetting;
 import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
@@ -96,6 +97,10 @@ public final class JafuScreen extends Screen {
         }
 
         if (toggleSacksStashTrackerOption(layout, click)) {
+            return true;
+        }
+
+        if (toggleGuiSettingsOption(layout, click)) {
             return true;
         }
 
@@ -193,7 +198,8 @@ public final class JafuScreen extends Screen {
         List<JafuModule> modules = visibleModules();
         for (int i = 0; i < modules.size(); i++) {
             if (layout.moduleToggle(i).contains(click.x(), click.y())) {
-                if (JafuModules.GLOBAL_SETTINGS.equals(modules.get(i).id())) {
+                if (JafuModules.GLOBAL_SETTINGS.equals(modules.get(i).id())
+                        || JafuModules.GUI_SETTINGS.equals(modules.get(i).id())) {
                     selectedModuleIndex = i;
                     return true;
                 }
@@ -357,6 +363,8 @@ public final class JafuScreen extends Screen {
             drawSacksStashTrackerOptions(context, detailPanel);
         } else if (JafuModules.GLOBAL_SETTINGS.equals(selectedModule.id())) {
             drawGlobalSettingsOptions(context, detailPanel);
+        } else if (JafuModules.GUI_SETTINGS.equals(selectedModule.id())) {
+            drawGuiSettingsOptions(context, detailPanel);
         } else if (JafuModules.ITEM_VIEW.equals(selectedModule.id())) {
             drawItemViewOptions(context, detailPanel);
         } else if (JafuModules.CHAT_ENHANCEMENTS.equals(selectedModule.id())) {
@@ -387,6 +395,18 @@ public final class JafuScreen extends Screen {
         GuiDraw.text(context, textRenderer, "Session", detailPanel.x() + 16, resetButton.y() - 16, JafuTheme.TEXT_MUTED);
         GuiDraw.fill(context, resetButton, JafuTheme.CONTROL);
         GuiDraw.text(context, textRenderer, "Reset stats", resetButton.x() + 13, resetButton.y() + 6, JafuTheme.WARN);
+    }
+
+    private void drawGuiSettingsOptions(DrawContext context, Rect detailPanel) {
+        GuiDraw.text(context, textRenderer, "Menu appearance", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
+
+        Rect row = trackerOptionRow(detailPanel, 0);
+        Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
+        boolean enabled = GuiSettings.INSTANCE.customFontEnabled();
+
+        GuiDraw.fill(context, checkbox, enabled ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
+        GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), enabled ? JafuTheme.ACCENT : JafuTheme.BORDER);
+        GuiDraw.text(context, textRenderer, "Custom GUI font", row.x() + 18, row.y() + 4, enabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
     }
 
     private void drawGlobalSettingsOptions(DrawContext context, Rect detailPanel) {
@@ -575,6 +595,19 @@ public final class JafuScreen extends Screen {
                 SacksStashSettings.INSTANCE.toggle(options.get(i));
                 return true;
             }
+        }
+        return false;
+    }
+
+    private boolean toggleGuiSettingsOption(JafuLayout layout, Click click) {
+        JafuModule selectedModule = selectedModule();
+        if (!JafuModules.GUI_SETTINGS.equals(selectedModule.id())) {
+            return false;
+        }
+
+        if (trackerOptionRow(layout.detailPanel(), 0).contains(click.x(), click.y())) {
+            GuiSettings.INSTANCE.toggleCustomFont();
+            return true;
         }
         return false;
     }
