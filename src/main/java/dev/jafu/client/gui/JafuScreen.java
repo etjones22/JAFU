@@ -2,6 +2,8 @@ package dev.jafu.client.gui;
 
 import java.util.List;
 
+import dev.jafu.client.feature.general.chat.ChatEnhancementOption;
+import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.feature.general.itemview.ItemViewSetting;
 import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestSettings;
@@ -77,6 +79,10 @@ public final class JafuScreen extends Screen {
         }
 
         if (startItemViewSlider(layout, click)) {
+            return true;
+        }
+
+        if (toggleChatEnhancementOption(layout, click)) {
             return true;
         }
 
@@ -278,6 +284,8 @@ public final class JafuScreen extends Screen {
             drawSacksStashTrackerOptions(context, detailPanel);
         } else if (JafuModules.ITEM_VIEW.equals(selectedModule.id())) {
             drawItemViewOptions(context, detailPanel);
+        } else if (JafuModules.CHAT_ENHANCEMENTS.equals(selectedModule.id())) {
+            drawChatEnhancementOptions(context, detailPanel);
         } else {
             drawPreview(context, detailPanel);
         }
@@ -315,6 +323,21 @@ public final class JafuScreen extends Screen {
             GuiDraw.fill(context, slider, JafuTheme.CONTROL);
             GuiDraw.fill(context, new Rect(slider.x(), slider.y(), knobX - slider.x(), slider.height()), JafuTheme.ACCENT_SOFT);
             GuiDraw.fill(context, new Rect(knobX - 2, slider.y() - 2, 4, slider.height() + 4), JafuTheme.ACCENT);
+        }
+    }
+
+    private void drawChatEnhancementOptions(DrawContext context, Rect detailPanel) {
+        GuiDraw.text(context, textRenderer, "Chat options", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
+        List<ChatEnhancementOption> options = ChatEnhancementOption.all();
+        for (int i = 0; i < options.size(); i++) {
+            ChatEnhancementOption option = options.get(i);
+            Rect row = trackerOptionRow(detailPanel, i);
+            Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
+            boolean enabled = ChatEnhancementsSettings.INSTANCE.isEnabled(option);
+
+            GuiDraw.fill(context, checkbox, enabled ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
+            GuiDraw.fill(context, new Rect(checkbox.x() + 2, checkbox.y() + 2, 6, 6), enabled ? JafuTheme.ACCENT : JafuTheme.BORDER);
+            GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, enabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
     }
 
@@ -412,6 +435,23 @@ public final class JafuScreen extends Screen {
             if (row.contains(click.x(), click.y())) {
                 draggingItemViewSetting = settings.get(i);
                 updateItemViewSlider(layout, draggingItemViewSetting, click.x());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean toggleChatEnhancementOption(JafuLayout layout, Click click) {
+        JafuModule selectedModule = selectedModule();
+        if (!JafuModules.CHAT_ENHANCEMENTS.equals(selectedModule.id())) {
+            return false;
+        }
+
+        Rect detailPanel = layout.detailPanel();
+        List<ChatEnhancementOption> options = ChatEnhancementOption.all();
+        for (int i = 0; i < options.size(); i++) {
+            if (trackerOptionRow(detailPanel, i).contains(click.x(), click.y())) {
+                ChatEnhancementsSettings.INSTANCE.toggle(options.get(i));
                 return true;
             }
         }
