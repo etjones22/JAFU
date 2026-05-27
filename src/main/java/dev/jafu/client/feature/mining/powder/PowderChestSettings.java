@@ -36,7 +36,7 @@ public final class PowderChestSettings {
     public int visibleStatCount() {
         int count = 0;
         for (PowderChestStatOption option : PowderChestStatOption.all()) {
-            if (isVisible(option)) {
+            if (option.addsHudLine() && isVisible(option)) {
                 count++;
             }
         }

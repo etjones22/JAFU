@@ -1,6 +1,10 @@
 package dev.jafu.client.feature.mining.powder;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.gui.CleanFont;
@@ -19,8 +23,12 @@ public final class PowderChestHud {
     private static final int WIDTH = 244;
     private static final int LINE_HEIGHT = 10;
     private static final int MAX_DROPS = 6;
+    private static final long ANIMATION_MILLIS = 240L;
 
     private final PowderChestTracker tracker;
+    private final Map<String, Double> animatedAmounts = new HashMap<>();
+    private final Map<String, Double> animatedRows = new HashMap<>();
+    private long lastRenderMillis;
 
     public PowderChestHud(PowderChestTracker tracker) {
         this.tracker = tracker;
@@ -33,8 +41,11 @@ public final class PowderChestHud {
         }
 
         TextRenderer textRenderer = client.textRenderer;
+        long nowMillis = System.currentTimeMillis();
+        double animationStep = animationStep(nowMillis);
         PowderChestSnapshot snapshot = tracker.snapshot();
         List<PowderChestDrop> drops = snapshot.topDrops(MAX_DROPS);
+        boolean animated = PowderChestSettings.INSTANCE.isVisible(PowderChestStatOption.SMOOTH_ITEM_ANIMATION);
         int height = 50 + PowderChestSettings.INSTANCE.visibleStatCount() * LINE_HEIGHT + drops.size() * LINE_HEIGHT;
         Rect bounds = HudLayoutStore.INSTANCE.bounds(
                 JafuHudElements.POWDER_CHEST_TRACKER,
@@ -55,18 +66,54 @@ public final class PowderChestHud {
 
         int rowY = y + 40;
         rowY = drawStats(context, textRenderer, snapshot.stats(), x, rowY);
+        Set<String> visibleDropNames = new HashSet<>();
         for (PowderChestDrop drop : drops) {
+            visibleDropNames.add(drop.name());
             int dropColor = PowderChestDropColors.forName(drop.name());
-            String amount = format(drop.amount());
-            GuiDraw.fill(context, new Rect(x, rowY + 2, 3, 6), dropColor);
-            drawText(context, textRenderer, amount, x + 8, rowY, dim(dropColor));
-            drawText(context, textRenderer, trimToWidth(textRenderer, drop.name(), WIDTH - 76), x + 66, rowY, dropColor);
+            double drawRowY = animated ? animatedValue(animatedRows, drop.name(), rowY, animationStep) : rowY;
+            long amount = animated ? Math.round(animatedValue(animatedAmounts, drop.name(), drop.amount(), animationStep)) : drop.amount();
+            GuiDraw.fill(context, new Rect(x, (int) Math.round(drawRowY) + 2, 3, 6), dropColor);
+            drawText(context, textRenderer, format(amount), x + 8, (int) Math.round(drawRowY), dim(dropColor));
+            drawText(context, textRenderer, trimToWidth(textRenderer, drop.name(), WIDTH - 76), x + 66, (int) Math.round(drawRowY), dropColor);
             rowY += LINE_HEIGHT;
         }
+        animatedAmounts.keySet().removeIf(name -> !visibleDropNames.contains(name));
+        animatedRows.keySet().removeIf(name -> !visibleDropNames.contains(name));
     }
 
     private static String format(long value) {
         return String.format("%,d", value);
+    }
+
+    private double animationStep(long nowMillis) {
+        if (lastRenderMillis == 0L) {
+            lastRenderMillis = nowMillis;
+            return 1.0D;
+        }
+
+        long deltaMillis = Math.max(0L, nowMillis - lastRenderMillis);
+        lastRenderMillis = nowMillis;
+        return Math.min(1.0D, deltaMillis / (double) ANIMATION_MILLIS);
+    }
+
+    private static double animatedValue(Map<String, Double> values, String key, double target, double step) {
+        Double current = values.get(key);
+        if (current == null) {
+            values.put(key, target);
+            return target;
+        }
+
+        double next = current + (target - current) * ease(step);
+        if (Math.abs(target - next) < 0.05D) {
+            next = target;
+        }
+        values.put(key, next);
+        return next;
+    }
+
+    private static double ease(double value) {
+        double clamped = Math.max(0.0D, Math.min(1.0D, value));
+        return 1.0D - Math.pow(1.0D - clamped, 3.0D);
     }
 
     private static int drawStats(
