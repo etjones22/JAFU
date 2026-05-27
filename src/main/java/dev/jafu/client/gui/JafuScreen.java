@@ -348,8 +348,9 @@ public final class JafuScreen extends Screen {
 
         Rect panel = layout.panel();
         List<JafuModule> modules = visibleModules();
-        GuiDraw.text(context, textRenderer, selectedCategory.title(), panel.x() + 166, panel.y() + 58, JafuTheme.TEXT);
-        GuiDraw.text(context, textRenderer, "Modules", panel.x() + 166, panel.y() + 74, JafuTheme.TEXT_MUTED);
+        int listX = layout.moduleRow(0).x();
+        GuiDraw.text(context, textRenderer, selectedCategory.title(), listX + 12, panel.y() + 58, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, "Modules", listX + 12, panel.y() + 74, JafuTheme.TEXT_MUTED);
 
         for (int i = 0; i < modules.size(); i++) {
             drawModuleRow(context, layout.moduleRow(i), modules.get(i), i, mouseX, mouseY);
@@ -359,7 +360,7 @@ public final class JafuScreen extends Screen {
                 context,
                 textRenderer,
                 "Hypixel-safe defaults: informational UI only.",
-                panel.x() + 166,
+                listX + 12,
                 layout.contentBottom() - 22,
                 JafuTheme.TEXT_MUTED
         );
@@ -458,13 +459,16 @@ public final class JafuScreen extends Screen {
         int restingBackground = hovered ? JafuTheme.HOVERED_ROW : JafuTheme.PANEL_LIGHT;
         int background = lerpColor(restingBackground, JafuTheme.SELECTED_ROW, selectedProgress);
 
+        Rect toggle = new Rect(rowBounds.right() - 38, rowBounds.y() + 7, 30, 20);
+        int textX = rowBounds.x() + 28;
+        int textWidth = Math.max(20, toggle.x() - textX - 8);
+
         GuiDraw.fill(context, rowBounds, background);
         GuiDraw.horizontalLine(context, rowBounds.x(), rowBounds.y(), rowBounds.width(), lerpColor(JafuTheme.BORDER_FAINT, JafuTheme.ACCENT, selectedProgress));
-        GuiDraw.fill(context, new Rect(rowBounds.x() + 10, rowBounds.y() + 11, 8, 8), module.color());
-        GuiDraw.text(context, textRenderer, module.name(), rowBounds.x() + 28, rowBounds.y() + 8, JafuTheme.TEXT);
-        GuiDraw.text(context, textRenderer, module.description(), rowBounds.x() + 28, rowBounds.y() + 21, JafuTheme.TEXT_MUTED);
+        GuiDraw.fill(context, new Rect(rowBounds.x() + 10, rowBounds.y() + 10, 8, 8), module.color());
+        GuiDraw.text(context, textRenderer, trimToWidth(module.name(), textWidth), textX, rowBounds.y() + 7, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, trimToWidth(module.description(), textWidth), textX, rowBounds.y() + 20, JafuTheme.TEXT_MUTED);
 
-        Rect toggle = new Rect(rowBounds.right() - 38, rowBounds.y() + 8, 30, 20);
         GuiDraw.fill(context, toggle, lerpColor(JafuTheme.CONTROL, 0xFF26445B, enabledProgress));
         int knobX = toggle.x() + 4 + (int) Math.round(enabledProgress * (toggle.width() - 12));
         GuiDraw.fill(context, new Rect(knobX, toggle.y() + 5, 6, 10), lerpColor(JafuTheme.TEXT_MUTED, JafuTheme.ACCENT, enabledProgress));
@@ -473,7 +477,7 @@ public final class JafuScreen extends Screen {
                 textRenderer,
                 module.enabled() ? "ON" : "OFF",
                 rowBounds.right() - 31,
-                rowBounds.y() + 14,
+                rowBounds.y() + 13,
                 lerpColor(JafuTheme.TEXT_MUTED, JafuTheme.GOOD, enabledProgress)
         );
     }
@@ -682,8 +686,8 @@ public final class JafuScreen extends Screen {
     }
 
     private void drawStatus(DrawContext context, JafuLayout layout) {
-        Rect panel = layout.panel();
-        Rect status = new Rect(panel.x() + 400, panel.bottom() - 76, panel.right() - panel.x() - 434, 20);
+        Rect detailPanel = layout.detailPanel();
+        Rect status = new Rect(detailPanel.x() + 16, detailPanel.bottom() - 32, detailPanel.width() - 32, 20);
         GuiDraw.fill(context, status, JafuTheme.CONTROL);
         GuiDraw.text(context, textRenderer, "Status: scaffolded", status.x() + 12, status.y() + 6, JafuTheme.GOOD);
     }
@@ -979,6 +983,28 @@ public final class JafuScreen extends Screen {
 
     private static int lerpChannel(int from, int to, double progress) {
         return (int) Math.round(from + (to - from) * progress);
+    }
+
+    private String trimToWidth(String text, int maxWidth) {
+        if (maxWidth <= 0 || text.isEmpty()) {
+            return "";
+        }
+        if (textRenderer.getWidth(text) <= maxWidth) {
+            return text;
+        }
+
+        String ellipsis = "...";
+        int ellipsisWidth = textRenderer.getWidth(ellipsis);
+        if (ellipsisWidth >= maxWidth) {
+            return "";
+        }
+
+        int availableWidth = maxWidth - ellipsisWidth;
+        String trimmed = text;
+        while (!trimmed.isEmpty() && textRenderer.getWidth(trimmed) > availableWidth) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed + ellipsis;
     }
 
     private static Rect powderTrackerOptionRow(Rect detailPanel, int index) {

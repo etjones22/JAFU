@@ -3,8 +3,8 @@ package dev.jafu.client.gui;
 import dev.jafu.client.gui.util.Rect;
 
 public record JafuLayout(Rect panel, Rect sidebar, Rect header, Rect closeButton) {
-    private static final int MAX_WIDTH = 620;
-    private static final int MAX_HEIGHT = 364;
+    private static final int MAX_WIDTH = 680;
+    private static final int MAX_HEIGHT = 420;
     private static final int OUTER_PADDING_X = 32;
     private static final int OUTER_PADDING_Y = 28;
 
@@ -29,16 +29,16 @@ public record JafuLayout(Rect panel, Rect sidebar, Rect header, Rect closeButton
     }
 
     public Rect moduleRow(int index) {
-        return new Rect(panel.x() + 154, panel.y() + 72 + index * 46, 210, 36);
+        return new Rect(panel.x() + 154, panel.y() + 86 + index * 39, 220, 34);
     }
 
     public Rect moduleToggle(int index) {
         Rect row = moduleRow(index);
-        return new Rect(row.right() - 38, row.y() + 8, 30, 20);
+        return new Rect(row.right() - 38, row.y() + 7, 30, 20);
     }
 
     public Rect detailPanel() {
-        return new Rect(panel.x() + 384, panel.y() + 72, panel.right() - panel.x() - 402, panel.height() - 116);
+        return new Rect(panel.x() + 384, panel.y() + 86, panel.right() - panel.x() - 402, panel.height() - 130);
     }
 
     public Rect commandBadge() {
