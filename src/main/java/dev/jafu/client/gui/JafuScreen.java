@@ -566,6 +566,11 @@ public final class JafuScreen extends Screen {
 
         drawCheckbox(context, checkbox, enabled, "gui:custom_font");
         GuiDraw.text(context, textRenderer, "Custom GUI font", row.x() + 18, row.y() + 4, enabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+
+        Rect clickGuiRow = trackerOptionRow(detailPanel, 1);
+        GuiDraw.text(context, textRenderer, "ClickGUI", clickGuiRow.x(), clickGuiRow.y() + 4, JafuTheme.TEXT);
+        drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V1, 1);
+        drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V2, 1);
     }
 
     private void drawGlobalSettingsOptions(DrawContext context, Rect detailPanel) {
@@ -602,7 +607,11 @@ public final class JafuScreen extends Screen {
     }
 
     private void drawClickGuiVersionButton(DrawContext context, Rect detailPanel, ClickGuiVersion version) {
-        Rect button = clickGuiVersionButton(detailPanel, version);
+        drawClickGuiVersionButton(context, detailPanel, version, 2);
+    }
+
+    private void drawClickGuiVersionButton(DrawContext context, Rect detailPanel, ClickGuiVersion version, int rowIndex) {
+        Rect button = clickGuiVersionButton(detailPanel, version, rowIndex);
         boolean selected = GlobalSettings.INSTANCE.clickGuiVersion() == version;
         GuiDraw.fill(context, button, selected ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
         GuiDraw.text(context, textRenderer, version.label(), button.x() + 10, button.y() + 4, selected ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
@@ -798,6 +807,15 @@ public final class JafuScreen extends Screen {
 
         if (trackerOptionRow(layout.detailPanel(), 0).contains(click.x(), click.y())) {
             GuiSettings.INSTANCE.toggleCustomFont();
+            return true;
+        }
+        Rect detailPanel = layout.detailPanel();
+        if (clickGuiVersionButton(detailPanel, ClickGuiVersion.V1, 1).contains(click.x(), click.y())) {
+            JafuScreens.switchTo(ClickGuiVersion.V1);
+            return true;
+        }
+        if (clickGuiVersionButton(detailPanel, ClickGuiVersion.V2, 1).contains(click.x(), click.y())) {
+            JafuScreens.switchTo(ClickGuiVersion.V2);
             return true;
         }
         return false;
@@ -1075,7 +1093,11 @@ public final class JafuScreen extends Screen {
     }
 
     private static Rect clickGuiVersionButton(Rect detailPanel, ClickGuiVersion version) {
-        Rect row = trackerOptionRow(detailPanel, 2);
+        return clickGuiVersionButton(detailPanel, version, 2);
+    }
+
+    private static Rect clickGuiVersionButton(Rect detailPanel, ClickGuiVersion version, int rowIndex) {
+        Rect row = trackerOptionRow(detailPanel, rowIndex);
         int width = 34;
         int x = row.right() - width * 2 + version.ordinal() * width;
         return new Rect(x, row.y(), width, 16);

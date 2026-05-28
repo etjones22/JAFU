@@ -1,28 +1,30 @@
 package dev.jafu.client.feature.general.itemview;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Properties;
 
-import net.fabricmc.loader.api.FabricLoader;
+import dev.jafu.client.config.ConfigFile;
+import dev.jafu.client.config.JafuConfigManager;
+import dev.jafu.client.config.JafuConfigurable;
 import net.minecraft.util.math.MathHelper;
 
-public final class ItemViewSettings {
+public final class ItemViewSettings implements JafuConfigurable {
     public static final ItemViewSettings INSTANCE = new ItemViewSettings();
 
     private final Map<ItemViewSetting, Double> values = new EnumMap<>(ItemViewSetting.class);
-    private final Path configPath = FabricLoader.getInstance().getConfigDir().resolve("jafu-item-view.properties");
+    private final ConfigFile config = ConfigFile.named("jafu-item-view.properties");
 
     private ItemViewSettings() {
         for (ItemViewSetting setting : ItemViewSetting.all()) {
             values.put(setting, setting.defaultValue());
         }
+        JafuConfigManager.register(this);
         load();
+    }
+
+    @Override
+    public String configId() {
+        return "item_view";
     }
 
     public double value(ItemViewSetting setting) {
@@ -38,41 +40,26 @@ public final class ItemViewSettings {
         return (int) Math.round(value(setting));
     }
 
-    private void load() {
-        if (!Files.isRegularFile(configPath)) {
-            return;
-        }
-
-        Properties properties = new Properties();
-        try (Reader reader = Files.newBufferedReader(configPath)) {
-            properties.load(reader);
-        } catch (IOException ignored) {
-            return;
+    @Override
+    public boolean load() {
+        if (!config.load()) {
+            return false;
         }
 
         for (ItemViewSetting setting : ItemViewSetting.all()) {
-            try {
-                setValue(setting, Double.parseDouble(properties.getProperty(setting.id(), Double.toString(setting.defaultValue()))));
-            } catch (NumberFormatException ignored) {
-                values.put(setting, setting.defaultValue());
-            }
+            double value = config.doubleValue(setting.id(), setting.defaultValue());
+            values.put(setting, snap(setting, MathHelper.clamp(value, setting.min(), setting.max())));
         }
+        return true;
     }
 
-    private void save() {
-        Properties properties = new Properties();
+    @Override
+    public boolean save() {
+        config.clear();
         for (ItemViewSetting setting : ItemViewSetting.all()) {
-            properties.setProperty(setting.id(), Double.toString(value(setting)));
+            config.setDouble(setting.id(), value(setting));
         }
-
-        try {
-            Files.createDirectories(configPath.getParent());
-            try (Writer writer = Files.newBufferedWriter(configPath)) {
-                properties.store(writer, "JAFU item view");
-            }
-        } catch (IOException ignored) {
-            // Item view settings should never crash the client.
-        }
+        return config.save("JAFU item view");
     }
 
     private static double snap(ItemViewSetting setting, double value) {

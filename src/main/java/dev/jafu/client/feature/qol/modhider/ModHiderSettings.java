@@ -1,22 +1,23 @@
 package dev.jafu.client.feature.qol.modhider;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Properties;
+import dev.jafu.client.config.ConfigFile;
+import dev.jafu.client.config.JafuConfigManager;
+import dev.jafu.client.config.JafuConfigurable;
 
-import net.fabricmc.loader.api.FabricLoader;
-
-public final class ModHiderSettings {
+public final class ModHiderSettings implements JafuConfigurable {
     public static final ModHiderSettings INSTANCE = new ModHiderSettings();
 
-    private final Path configPath = FabricLoader.getInstance().getConfigDir().resolve("jafu-mod-hider.properties");
+    private final ConfigFile config = ConfigFile.named("jafu-mod-hider.properties");
     private boolean enabled;
 
     private ModHiderSettings() {
+        JafuConfigManager.register(this);
         load();
+    }
+
+    @Override
+    public String configId() {
+        return "mod_hider";
     }
 
     public boolean enabled() {
@@ -28,32 +29,20 @@ public final class ModHiderSettings {
         save();
     }
 
-    private void load() {
-        if (!Files.isRegularFile(configPath)) {
-            return;
+    @Override
+    public boolean load() {
+        if (!config.load()) {
+            return false;
         }
-
-        Properties properties = new Properties();
-        try (Reader reader = Files.newBufferedReader(configPath)) {
-            properties.load(reader);
-        } catch (IOException ignored) {
-            return;
-        }
-
-        enabled = Boolean.parseBoolean(properties.getProperty("enabled", "false"));
+        enabled = false;
+        enabled = config.booleanValue("enabled", false);
+        return true;
     }
 
-    private void save() {
-        Properties properties = new Properties();
-        properties.setProperty("enabled", Boolean.toString(enabled));
-
-        try {
-            Files.createDirectories(configPath.getParent());
-            try (Writer writer = Files.newBufferedWriter(configPath)) {
-                properties.store(writer, "JAFU Mod Hider settings");
-            }
-        } catch (IOException ignored) {
-            // Mod hider settings should never crash the client.
-        }
+    @Override
+    public boolean save() {
+        config.clear();
+        config.setBoolean("enabled", enabled);
+        return config.save("JAFU Mod Hider settings");
     }
 }

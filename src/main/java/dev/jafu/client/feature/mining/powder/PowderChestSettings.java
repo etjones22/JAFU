@@ -1,27 +1,29 @@
 package dev.jafu.client.feature.mining.powder;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Properties;
 
-import net.fabricmc.loader.api.FabricLoader;
+import dev.jafu.client.config.ConfigFile;
+import dev.jafu.client.config.JafuConfigManager;
+import dev.jafu.client.config.JafuConfigurable;
 
-public final class PowderChestSettings {
+public final class PowderChestSettings implements JafuConfigurable {
     public static final PowderChestSettings INSTANCE = new PowderChestSettings();
 
     private final Map<PowderChestStatOption, Boolean> visibleStats = new EnumMap<>(PowderChestStatOption.class);
-    private final Path configPath = FabricLoader.getInstance().getConfigDir().resolve("jafu-powder-chest.properties");
+    private final ConfigFile config = ConfigFile.named("jafu-powder-chest.properties");
 
     private PowderChestSettings() {
         for (PowderChestStatOption option : PowderChestStatOption.all()) {
             visibleStats.put(option, true);
         }
+        JafuConfigManager.register(this);
         load();
+    }
+
+    @Override
+    public String configId() {
+        return "powder_chest";
     }
 
     public boolean isVisible(PowderChestStatOption option) {
@@ -43,36 +45,24 @@ public final class PowderChestSettings {
         return count;
     }
 
-    private void load() {
-        if (!Files.isRegularFile(configPath)) {
-            return;
-        }
-
-        Properties properties = new Properties();
-        try (Reader reader = Files.newBufferedReader(configPath)) {
-            properties.load(reader);
-        } catch (IOException ignored) {
-            return;
+    @Override
+    public boolean load() {
+        if (!config.load()) {
+            return false;
         }
 
         for (PowderChestStatOption option : PowderChestStatOption.all()) {
-            visibleStats.put(option, Boolean.parseBoolean(properties.getProperty(option.id(), "true")));
+            visibleStats.put(option, config.booleanValue(option.id(), true));
         }
+        return true;
     }
 
-    private void save() {
-        Properties properties = new Properties();
+    @Override
+    public boolean save() {
+        config.clear();
         for (PowderChestStatOption option : PowderChestStatOption.all()) {
-            properties.setProperty(option.id(), Boolean.toString(isVisible(option)));
+            config.setBoolean(option.id(), isVisible(option));
         }
-
-        try {
-            Files.createDirectories(configPath.getParent());
-            try (Writer writer = Files.newBufferedWriter(configPath)) {
-                properties.store(writer, "JAFU powder chest tracker");
-            }
-        } catch (IOException ignored) {
-            // Tracker settings should never crash the client.
-        }
+        return config.save("JAFU powder chest tracker");
     }
 }

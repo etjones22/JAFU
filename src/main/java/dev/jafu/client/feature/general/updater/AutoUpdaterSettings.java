@@ -1,22 +1,23 @@
 package dev.jafu.client.feature.general.updater;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Properties;
+import dev.jafu.client.config.ConfigFile;
+import dev.jafu.client.config.JafuConfigManager;
+import dev.jafu.client.config.JafuConfigurable;
 
-import net.fabricmc.loader.api.FabricLoader;
-
-public final class AutoUpdaterSettings {
+public final class AutoUpdaterSettings implements JafuConfigurable {
     public static final AutoUpdaterSettings INSTANCE = new AutoUpdaterSettings();
 
-    private final Path configPath = FabricLoader.getInstance().getConfigDir().resolve("jafu-updater.properties");
+    private final ConfigFile config = ConfigFile.named("jafu-updater.properties");
     private UpdateChannel channel = UpdateChannel.STABLE;
 
     private AutoUpdaterSettings() {
+        JafuConfigManager.register(this);
         load();
+    }
+
+    @Override
+    public String configId() {
+        return "auto_updater";
     }
 
     public UpdateChannel channel() {
@@ -33,32 +34,20 @@ public final class AutoUpdaterSettings {
         return channel;
     }
 
-    private void load() {
-        if (!Files.isRegularFile(configPath)) {
-            return;
+    @Override
+    public boolean load() {
+        if (!config.load()) {
+            return false;
         }
-
-        Properties properties = new Properties();
-        try (Reader reader = Files.newBufferedReader(configPath)) {
-            properties.load(reader);
-        } catch (IOException ignored) {
-            return;
-        }
-
-        channel = UpdateChannel.fromId(properties.getProperty("channel", UpdateChannel.STABLE.id()));
+        channel = UpdateChannel.STABLE;
+        channel = UpdateChannel.fromId(config.stringValue("channel", UpdateChannel.STABLE.id()));
+        return true;
     }
 
-    private void save() {
-        Properties properties = new Properties();
-        properties.setProperty("channel", channel.id());
-
-        try {
-            Files.createDirectories(configPath.getParent());
-            try (Writer writer = Files.newBufferedWriter(configPath)) {
-                properties.store(writer, "JAFU updater");
-            }
-        } catch (IOException ignored) {
-            // Updater settings should never crash the client.
-        }
+    @Override
+    public boolean save() {
+        config.clear();
+        config.setString("channel", channel.id());
+        return config.save("JAFU updater");
     }
 }

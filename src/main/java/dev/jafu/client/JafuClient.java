@@ -1,6 +1,7 @@
 package dev.jafu.client;
 
 import dev.jafu.client.command.JafuCommands;
+import dev.jafu.client.config.JafuConfigs;
 import dev.jafu.client.feature.general.etherwarp.EtherwarpFeature;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.mining.powder.PowderChestFeature;
@@ -12,6 +13,7 @@ public final class JafuClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        JafuConfigs.bootstrap();
         JafuCommands.register();
         EtherwarpFeature.register();
         PowderChestFeature.register();

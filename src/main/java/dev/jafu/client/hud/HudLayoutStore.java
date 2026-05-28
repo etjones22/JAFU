@@ -1,26 +1,28 @@
 package dev.jafu.client.hud;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
+import dev.jafu.client.config.ConfigFile;
+import dev.jafu.client.config.JafuConfigManager;
+import dev.jafu.client.config.JafuConfigurable;
 import dev.jafu.client.gui.util.Rect;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.math.MathHelper;
 
-public final class HudLayoutStore {
+public final class HudLayoutStore implements JafuConfigurable {
     public static final HudLayoutStore INSTANCE = new HudLayoutStore();
 
     private final Map<String, Layout> layouts = new HashMap<>();
-    private final Path configPath = FabricLoader.getInstance().getConfigDir().resolve("jafu-hud.properties");
+    private final ConfigFile config = ConfigFile.named("jafu-hud.properties");
 
     private HudLayoutStore() {
+        JafuConfigManager.register(this);
         load();
+    }
+
+    @Override
+    public String configId() {
+        return "hud_layout";
     }
 
     public Rect bounds(JafuHudElement element, int width, int height, int screenWidth, int screenHeight) {
@@ -61,76 +63,46 @@ public final class HudLayoutStore {
         layouts.clear();
     }
 
-    public void save() {
-        Properties properties = new Properties();
+    @Override
+    public boolean save() {
+        config.clear();
         layouts.forEach((id, layout) -> {
-            properties.setProperty(id + ".x", Integer.toString(layout.x()));
-            properties.setProperty(id + ".y", Integer.toString(layout.y()));
+            config.setInt(id + ".x", layout.x());
+            config.setInt(id + ".y", layout.y());
             if (layout.width() != null) {
-                properties.setProperty(id + ".width", Integer.toString(layout.width()));
+                config.setInt(id + ".width", layout.width());
             }
             if (layout.height() != null) {
-                properties.setProperty(id + ".height", Integer.toString(layout.height()));
+                config.setInt(id + ".height", layout.height());
             }
         });
 
-        try {
-            Files.createDirectories(configPath.getParent());
-            try (Writer writer = Files.newBufferedWriter(configPath)) {
-                properties.store(writer, "JAFU HUD layout");
-            }
-        } catch (IOException ignored) {
-            // Layout edits should never crash the client.
-        }
+        return config.save("JAFU HUD layout");
     }
 
-    private void load() {
-        if (!Files.isRegularFile(configPath)) {
-            return;
+    @Override
+    public boolean load() {
+        if (!config.load()) {
+            return false;
         }
 
-        Properties properties = new Properties();
-        try (Reader reader = Files.newBufferedReader(configPath)) {
-            properties.load(reader);
-        } catch (IOException ignored) {
-            return;
-        }
-
+        layouts.clear();
         for (JafuHudElement element : JafuHudElements.all()) {
-            boolean hasLayout = properties.containsKey(element.id() + ".x")
-                    || properties.containsKey(element.id() + ".y")
-                    || properties.containsKey(element.id() + ".width")
-                    || properties.containsKey(element.id() + ".height");
+            boolean hasLayout = config.contains(element.id() + ".x")
+                    || config.contains(element.id() + ".y")
+                    || config.contains(element.id() + ".width")
+                    || config.contains(element.id() + ".height");
             if (!hasLayout) {
                 continue;
             }
 
-            int x = readInt(properties, element.id() + ".x", element.defaultX());
-            int y = readInt(properties, element.id() + ".y", element.defaultY());
-            Integer width = readOptionalInt(properties, element.id() + ".width");
-            Integer height = readOptionalInt(properties, element.id() + ".height");
+            int x = config.intValue(element.id() + ".x", element.defaultX());
+            int y = config.intValue(element.id() + ".y", element.defaultY());
+            Integer width = config.optionalIntValue(element.id() + ".width");
+            Integer height = config.optionalIntValue(element.id() + ".height");
             layouts.put(element.id(), new Layout(x, y, width, height));
         }
-    }
-
-    private static int readInt(Properties properties, String key, int fallback) {
-        try {
-            return Integer.parseInt(properties.getProperty(key, Integer.toString(fallback)));
-        } catch (NumberFormatException ignored) {
-            return fallback;
-        }
-    }
-
-    private static Integer readOptionalInt(Properties properties, String key) {
-        if (!properties.containsKey(key)) {
-            return null;
-        }
-
-        try {
-            return Integer.parseInt(properties.getProperty(key));
-        } catch (NumberFormatException ignored) {
-            return null;
-        }
+        return true;
     }
 
     private static int clampPosition(int value, int size, int screenSize) {
