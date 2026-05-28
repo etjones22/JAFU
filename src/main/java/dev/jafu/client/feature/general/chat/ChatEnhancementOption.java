@@ -3,7 +3,9 @@ package dev.jafu.client.feature.general.chat;
 import java.util.List;
 
 public enum ChatEnhancementOption {
-    SMOOTH_CHAT("smooth_chat", "Smooth chat");
+    SMOOTH_CHAT("smooth_chat", "Smooth chat"),
+    HIDE_REPEATED_MESSAGES("hide_repeated_messages", "Hide repeated messages"),
+    HIDE_SPAM("hide_spam", "Hide spam");
 
     private static final List<ChatEnhancementOption> VALUES = List.of(values());
 

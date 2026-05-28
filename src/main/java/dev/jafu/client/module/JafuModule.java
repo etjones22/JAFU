@@ -1,6 +1,6 @@
 package dev.jafu.client.module;
 
-public final class JafuModule {
+public class JafuModule {
     private final String id;
     private final JafuCategory category;
     private final String name;

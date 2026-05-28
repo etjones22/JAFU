@@ -5,8 +5,12 @@
   "client": [
     "ChatHudMixin",
     "ClientConnectionMixin",
+    "DrawContextMixin",
+    "HandledScreenStorageIndexerMixin",
     "HeldItemRendererMixin",
-    "LightmapTextureManagerMixin"
+    "ItemStackTooltipMixin",
+    "LightmapTextureManagerMixin",
+    "MouseTooltipInputMixin"
   ],
   "injectors": {
     "defaultRequire": 1

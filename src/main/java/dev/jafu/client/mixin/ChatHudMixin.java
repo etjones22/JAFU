@@ -1,5 +1,6 @@
 package dev.jafu.client.mixin;
 
+import dev.jafu.client.feature.general.chat.ChatMessageFilter;
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
 import dev.jafu.client.gui.CleanFont;
@@ -35,8 +36,13 @@ public abstract class ChatHudMixin {
     @Unique
     private boolean jafu$pushedMatrix;
 
-    @Inject(method = "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V", at = @At("HEAD"))
+    @Inject(method = "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V", at = @At("HEAD"), cancellable = true)
     private void jafu$markMessage(Text message, MessageSignatureData signature, MessageIndicator indicator, CallbackInfo ci) {
+        if (ChatMessageFilter.shouldHide(message.getString())) {
+            ci.cancel();
+            return;
+        }
+
         if (ChatEnhancementsSettings.INSTANCE.smoothChatEnabled()) {
             jafu$lastMessageMillis = System.currentTimeMillis();
         }

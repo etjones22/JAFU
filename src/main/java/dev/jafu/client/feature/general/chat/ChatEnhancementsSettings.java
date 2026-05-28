@@ -40,6 +40,16 @@ public final class ChatEnhancementsSettings implements JafuConfigurable {
         return JafuModules.isEnabled(JafuModules.CHAT_ENHANCEMENTS) && isEnabled(ChatEnhancementOption.SMOOTH_CHAT);
     }
 
+    public boolean repeatedMessageFilterEnabled() {
+        return JafuModules.isEnabled(JafuModules.CHAT_ENHANCEMENTS)
+                && isEnabled(ChatEnhancementOption.HIDE_REPEATED_MESSAGES);
+    }
+
+    public boolean spamFilterEnabled() {
+        return JafuModules.isEnabled(JafuModules.CHAT_ENHANCEMENTS)
+                && isEnabled(ChatEnhancementOption.HIDE_SPAM);
+    }
+
     public double chatScale() {
         if (!JafuModules.isEnabled(JafuModules.CHAT_ENHANCEMENTS)) {
             return 1.0D;

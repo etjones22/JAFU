@@ -41,10 +41,23 @@ public final class JafuHudElements {
             66
     );
 
+    public static final JafuHudElement COOLDOWN_DISPLAY = new JafuHudElement(
+            JafuModules.COOLDOWN_DISPLAY,
+            JafuModules.COOLDOWN_DISPLAY,
+            "Cooldown Display",
+            8,
+            248,
+            176,
+            54,
+            122,
+            38
+    );
+
     private static final List<JafuHudElement> ELEMENTS = List.of(
             POWDER_CHEST_TRACKER,
             ETHERWARP_HELPER,
-            SACKS_STASH_TRACKER
+            SACKS_STASH_TRACKER,
+            COOLDOWN_DISPLAY
     );
 
     private JafuHudElements() {

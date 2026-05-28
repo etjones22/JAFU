@@ -3,6 +3,7 @@ package dev.jafu.client.gui;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import dev.jafu.client.feature.general.chat.ChatEnhancementOption;
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
@@ -14,12 +15,25 @@ import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.general.updater.AutoUpdaterSettings;
 import dev.jafu.client.feature.general.updater.UpdateChannel;
+import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipColorOption;
+import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipNumericSetting;
+import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipsSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestFeature;
 import dev.jafu.client.feature.mining.powder.PowderChestSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestStatOption;
 import dev.jafu.client.feature.mining.sacks.SacksStashOption;
 import dev.jafu.client.feature.mining.sacks.SacksStashSettings;
+import dev.jafu.client.feature.qol.cooldown.CooldownDisplayColorOption;
+import dev.jafu.client.feature.qol.cooldown.CooldownDisplayOption;
+import dev.jafu.client.feature.qol.cooldown.CooldownDisplaySettings;
+import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlayFeature;
+import dev.jafu.client.feature.qol.itemvalue.ItemValueNumericSetting;
+import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlayOption;
+import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlaySettings;
+import dev.jafu.client.feature.qol.itemvalue.PriceCacheStatus;
 import dev.jafu.client.feature.qol.modhider.ModHiderSettings;
+import dev.jafu.client.feature.skyblock.storage.StorageIndexStore;
+import dev.jafu.client.feature.skyblock.storage.StorageSnapshot;
 import dev.jafu.client.gui.util.GuiDraw;
 import dev.jafu.client.gui.util.Rect;
 import dev.jafu.client.module.JafuCategory;
@@ -57,6 +71,9 @@ public final class JafuV2Screen extends Screen {
     private boolean draggingGlobalTextScale;
     private boolean draggingChatScale;
     private ItemViewSetting draggingItemViewSetting;
+    private ScrollableTooltipNumericSetting draggingTooltipSetting;
+    private ItemValueNumericSetting draggingItemValueSetting;
+    private boolean draggingCooldownSeconds;
     private long lastFrameMillis;
     private double animationBlend = 1.0D;
     private double globalFontDropdownAnimation;
@@ -140,6 +157,18 @@ public final class JafuV2Screen extends Screen {
             updateItemViewSlider(card, draggingItemViewSetting, click.x());
             return true;
         }
+        if (draggingTooltipSetting != null) {
+            updateScrollableTooltipSlider(card, draggingTooltipSetting, click.x());
+            return true;
+        }
+        if (draggingItemValueSetting != null) {
+            updateItemValueSlider(card, draggingItemValueSetting, click.x());
+            return true;
+        }
+        if (draggingCooldownSeconds) {
+            updateCooldownSeconds(card, click.x());
+            return true;
+        }
         return super.mouseDragged(click, deltaX, deltaY);
     }
 
@@ -157,10 +186,13 @@ public final class JafuV2Screen extends Screen {
 
     @Override
     public boolean mouseReleased(Click click) {
-        boolean wasDragging = draggingGlobalTextScale || draggingChatScale || draggingItemViewSetting != null;
+        boolean wasDragging = draggingGlobalTextScale || draggingChatScale || draggingItemViewSetting != null || draggingTooltipSetting != null || draggingItemValueSetting != null || draggingCooldownSeconds;
         draggingGlobalTextScale = false;
         draggingChatScale = false;
         draggingItemViewSetting = null;
+        draggingTooltipSetting = null;
+        draggingItemValueSetting = null;
+        draggingCooldownSeconds = false;
         if (wasDragging) {
             return true;
         }
@@ -227,6 +259,12 @@ public final class JafuV2Screen extends Screen {
                 GuiDraw.fill(context, new Rect(centerX - 5, centerY - 1, 10, 2), color);
                 GuiDraw.fill(context, new Rect(centerX - 3, centerY + 4, 6, 2), color);
                 GuiDraw.fill(context, new Rect(centerX + 3, centerY - 4, 2, 4), multiplyAlpha(color, 0.7D));
+            }
+            case GUI -> {
+                GuiDraw.fill(context, new Rect(centerX - 7, centerY - 6, 14, 3), color);
+                GuiDraw.fill(context, new Rect(centerX - 7, centerY - 1, 10, 3), color);
+                GuiDraw.fill(context, new Rect(centerX - 7, centerY + 4, 6, 3), color);
+                GuiDraw.fill(context, new Rect(centerX + 5, centerY + 4, 2, 3), multiplyAlpha(color, 0.72D));
             }
             case SKYBLOCK -> {
                 GuiDraw.fill(context, new Rect(centerX - 6, centerY - 4, 3, 2), color);
@@ -336,6 +374,14 @@ public final class JafuV2Screen extends Screen {
             drawItemViewOptions(context, card);
         } else if (JafuModules.CHAT_ENHANCEMENTS.equals(module.id())) {
             drawChatEnhancementOptions(context, card);
+        } else if (JafuModules.SCROLLABLE_TOOLTIPS.equals(module.id())) {
+            drawScrollableTooltipsOptions(context, card);
+        } else if (JafuModules.STORAGE_INDEXER.equals(module.id())) {
+            drawStorageIndexerOptions(context, card);
+        } else if (JafuModules.ITEM_VALUE_OVERLAY.equals(module.id())) {
+            drawItemValueOverlayOptions(context, card);
+        } else if (JafuModules.COOLDOWN_DISPLAY.equals(module.id())) {
+            drawCooldownDisplayOptions(context, card);
         } else if (JafuModules.AUTO_UPDATER.equals(module.id())) {
             drawAutoUpdaterOptions(context, card);
         } else {
@@ -430,6 +476,100 @@ public final class JafuV2Screen extends Screen {
         drawSlider(context, chatScaleSlider(card), animatedSlider("v2:chat:scale", percent));
     }
 
+    private void drawScrollableTooltipsOptions(DrawContext context, Rect card) {
+        GuiDraw.text(context, textRenderer, "Tooltip behavior", card.x() + 14, card.y() + 48, MUTED);
+        drawCheckboxRow(context, optionRow(card, 0), "Fade gradients", ScrollableTooltipsSettings.INSTANCE.fadeGradients(), "tooltips:fades");
+
+        List<ScrollableTooltipNumericSetting> settings = ScrollableTooltipNumericSetting.all();
+        for (int i = 0; i < settings.size(); i++) {
+            ScrollableTooltipNumericSetting setting = settings.get(i);
+            int rowIndex = i + 1;
+            Rect row = optionRow(card, rowIndex);
+            double value = ScrollableTooltipsSettings.INSTANCE.value(setting);
+            double percent = (value - setting.min()) / (setting.max() - setting.min());
+
+            GuiDraw.text(context, textRenderer, setting.label(), row.x(), row.y() + 5, JafuTheme.TEXT);
+            GuiDraw.text(context, textRenderer, setting.format(value), row.right() - 42, row.y() + 5, WARM);
+            drawSlider(context, scrollableTooltipSlider(card, rowIndex), animatedSlider("v2:tooltips:" + setting.id(), percent));
+        }
+
+        Rect colorRow = optionRow(card, settings.size() + 1);
+        GuiDraw.text(context, textRenderer, "Bar color", colorRow.x(), colorRow.y() + 5, JafuTheme.TEXT);
+        drawScrollableTooltipColorSwatches(context, card, colorRow);
+    }
+
+    private void drawStorageIndexerOptions(DrawContext context, Rect card) {
+        GuiDraw.text(context, textRenderer, "Indexed storage", card.x() + 14, card.y() + 48, MUTED);
+
+        Rect preview = new Rect(card.x() + 14, card.y() + 74, card.width() - 28, 48);
+        GuiDraw.fill(context, preview, CARD_BORDER);
+        GuiDraw.text(context, textRenderer, "Cache keys: " + StorageIndexStore.INSTANCE.snapshotKeyCount(), preview.x() + 10, preview.y() + 10, WARM);
+
+        Optional<StorageSnapshot> newest = StorageIndexStore.INSTANCE.newestSnapshot();
+        String newestText = newest
+                .map(snapshot -> "Newest: " + snapshot.sourceName())
+                .orElse("Newest: nothing indexed");
+        GuiDraw.text(context, textRenderer, trimToWidth(newestText, preview.width() - 20), preview.x() + 10, preview.y() + 28, MUTED);
+    }
+
+    private void drawItemValueOverlayOptions(DrawContext context, Rect card) {
+        PriceCacheStatus status = ItemValueOverlayFeature.status();
+        GuiDraw.text(context, textRenderer, "Tooltip estimates", card.x() + 14, card.y() + 48, MUTED);
+
+        List<ItemValueOverlayOption> options = ItemValueOverlayOption.all();
+        for (int i = 0; i < options.size(); i++) {
+            ItemValueOverlayOption option = options.get(i);
+            drawCheckboxRow(context, optionRow(card, i), option.label(), ItemValueOverlaySettings.INSTANCE.isVisible(option), "item-value:" + option.id());
+        }
+
+        List<ItemValueNumericSetting> settings = ItemValueNumericSetting.all();
+        for (int i = 0; i < settings.size(); i++) {
+            ItemValueNumericSetting setting = settings.get(i);
+            int rowIndex = options.size() + i;
+            Rect row = optionRow(card, rowIndex);
+            double value = ItemValueOverlaySettings.INSTANCE.value(setting);
+            double percent = (value - setting.min()) / (setting.max() - setting.min());
+
+            GuiDraw.text(context, textRenderer, setting.label(), row.x(), row.y() + 5, JafuTheme.TEXT);
+            GuiDraw.text(context, textRenderer, setting.format(value), row.right() - 42, row.y() + 5, WARM);
+            drawSlider(context, itemValueSlider(card, rowIndex), animatedSlider("v2:item-value:" + setting.id(), percent));
+        }
+
+        int previewY = optionRow(card, options.size() + settings.size() + 1).y();
+        Rect preview = new Rect(card.x() + 14, previewY, card.width() - 28, 54);
+        GuiDraw.fill(context, preview, CARD_BORDER);
+        GuiDraw.text(context, textRenderer, "Bazaar: " + status.bazaarProducts(), preview.x() + 10, preview.y() + 10, WARM);
+        GuiDraw.text(context, textRenderer, "Auction names: " + status.auctionItems(), preview.x() + 10, preview.y() + 28, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, status.loading() ? "Refreshing prices..." : "Updated " + status.ageLabel(), preview.x() + 10, preview.y() + 46, MUTED);
+    }
+
+    private void drawCooldownDisplayOptions(DrawContext context, Rect card) {
+        GuiDraw.text(context, textRenderer, "Manual cooldown HUD", card.x() + 14, card.y() + 48, MUTED);
+
+        List<CooldownDisplayOption> options = CooldownDisplayOption.all();
+        for (int i = 0; i < options.size(); i++) {
+            CooldownDisplayOption option = options.get(i);
+            drawCheckboxRow(context, optionRow(card, i), option.label(), CooldownDisplaySettings.INSTANCE.isEnabled(option), "cooldown:" + option.id());
+        }
+
+        Rect sliderRow = optionRow(card, options.size());
+        double value = CooldownDisplaySettings.INSTANCE.cooldownSeconds();
+        double percent = (value - CooldownDisplaySettings.MIN_COOLDOWN_SECONDS)
+                / (CooldownDisplaySettings.MAX_COOLDOWN_SECONDS - CooldownDisplaySettings.MIN_COOLDOWN_SECONDS);
+        GuiDraw.text(context, textRenderer, "Cooldown length", sliderRow.x(), sliderRow.y() + 5, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, formatCooldownSeconds(value), sliderRow.right() - 42, sliderRow.y() + 5, WARM);
+        drawSlider(context, cooldownSecondsSlider(card), animatedSlider("v2:cooldown:seconds", percent));
+
+        Rect colorRow = optionRow(card, options.size() + 1);
+        GuiDraw.text(context, textRenderer, "Text color", colorRow.x(), colorRow.y() + 5, JafuTheme.TEXT);
+        drawCooldownColorSwatches(context, card, colorRow);
+
+        Rect preview = new Rect(card.x() + 14, optionRow(card, options.size() + 3).y(), card.width() - 28, 44);
+        GuiDraw.fill(context, preview, CARD_BORDER);
+        GuiDraw.text(context, textRenderer, "Preview: " + (CooldownDisplaySettings.INSTANCE.isEnabled(CooldownDisplayOption.USE_PROGRESS_BAR) ? "progress bar" : "text timer"), preview.x() + 10, preview.y() + 9, CooldownDisplaySettings.INSTANCE.textColor());
+        GuiDraw.text(context, textRenderer, "Move/resize in Edit HUD", preview.x() + 10, preview.y() + 27, MUTED);
+    }
+
     private void drawAutoUpdaterOptions(DrawContext context, Rect card) {
         GuiDraw.text(context, textRenderer, "Release channel", card.x() + 14, card.y() + 48, MUTED);
         Rect row = optionRow(card, 0);
@@ -456,6 +596,8 @@ public final class JafuV2Screen extends Screen {
         GuiDraw.text(context, textRenderer, "Made with ChatGPT", area.x() + 18, area.y() + 58, JafuTheme.TEXT);
         GuiDraw.text(context, textRenderer, "Mashed together by Chorey", area.x() + 18, area.y() + 78, JafuTheme.WARN);
         GuiDraw.text(context, textRenderer, "All hail the LLM's", area.x() + 18, area.y() + 98, JafuTheme.GOOD);
+        GuiDraw.text(context, textRenderer, "Mod integrity checker", area.x() + 18, area.y() + 126, WARM);
+        GuiDraw.text(context, textRenderer, "Verifies this build's hash/signature", area.x() + 18, area.y() + 144, MUTED);
     }
 
     private void drawCheckboxRow(DrawContext context, Rect row, String label, boolean checked, String key) {
@@ -574,6 +716,15 @@ public final class JafuV2Screen extends Screen {
         if (JafuModules.CHAT_ENHANCEMENTS.equals(module.id())) {
             return toggleChatEnhancementOption(card, click);
         }
+        if (JafuModules.SCROLLABLE_TOOLTIPS.equals(module.id())) {
+            return toggleScrollableTooltipsOption(card, click);
+        }
+        if (JafuModules.ITEM_VALUE_OVERLAY.equals(module.id())) {
+            return toggleItemValueOverlayOption(card, click);
+        }
+        if (JafuModules.COOLDOWN_DISPLAY.equals(module.id())) {
+            return toggleCooldownDisplayOption(card, click);
+        }
         if (JafuModules.AUTO_UPDATER.equals(module.id())) {
             return toggleAutoUpdaterOption(card, click);
         }
@@ -679,6 +830,78 @@ public final class JafuV2Screen extends Screen {
         return false;
     }
 
+    private boolean toggleScrollableTooltipsOption(Rect card, Click click) {
+        if (optionRow(card, 0).contains(click.x(), click.y())) {
+            ScrollableTooltipsSettings.INSTANCE.toggleFadeGradients();
+            return true;
+        }
+
+        List<ScrollableTooltipNumericSetting> settings = ScrollableTooltipNumericSetting.all();
+        for (int i = 0; i < settings.size(); i++) {
+            ScrollableTooltipNumericSetting setting = settings.get(i);
+            int rowIndex = i + 1;
+            if (expanded(scrollableTooltipSlider(card, rowIndex), 4).contains(click.x(), click.y())) {
+                draggingTooltipSetting = setting;
+                updateScrollableTooltipSlider(card, setting, click.x());
+                return true;
+            }
+        }
+
+        for (ScrollableTooltipColorOption option : ScrollableTooltipColorOption.all()) {
+            if (scrollableTooltipColorSwatch(card, option).contains(click.x(), click.y())) {
+                ScrollableTooltipsSettings.INSTANCE.setScrollBarColor(option.color());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean toggleItemValueOverlayOption(Rect card, Click click) {
+        List<ItemValueOverlayOption> options = ItemValueOverlayOption.all();
+        for (int i = 0; i < options.size(); i++) {
+            if (optionRow(card, i).contains(click.x(), click.y())) {
+                ItemValueOverlaySettings.INSTANCE.toggle(options.get(i));
+                return true;
+            }
+        }
+
+        List<ItemValueNumericSetting> settings = ItemValueNumericSetting.all();
+        for (int i = 0; i < settings.size(); i++) {
+            ItemValueNumericSetting setting = settings.get(i);
+            int rowIndex = options.size() + i;
+            if (expanded(itemValueSlider(card, rowIndex), 4).contains(click.x(), click.y())) {
+                draggingItemValueSetting = setting;
+                updateItemValueSlider(card, setting, click.x());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean toggleCooldownDisplayOption(Rect card, Click click) {
+        List<CooldownDisplayOption> options = CooldownDisplayOption.all();
+        for (int i = 0; i < options.size(); i++) {
+            if (optionRow(card, i).contains(click.x(), click.y())) {
+                CooldownDisplaySettings.INSTANCE.toggle(options.get(i));
+                return true;
+            }
+        }
+
+        if (expanded(cooldownSecondsSlider(card), 4).contains(click.x(), click.y())) {
+            draggingCooldownSeconds = true;
+            updateCooldownSeconds(card, click.x());
+            return true;
+        }
+
+        for (CooldownDisplayColorOption option : CooldownDisplayColorOption.all()) {
+            if (cooldownColorSwatch(card, option).contains(click.x(), click.y())) {
+                CooldownDisplaySettings.INSTANCE.setTextColor(option.color());
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean toggleAutoUpdaterOption(Rect card, Click click) {
         if (updaterChannelButton(card).contains(click.x(), click.y()) || optionRow(card, 0).contains(click.x(), click.y())) {
             UpdateChannel channel = AutoUpdaterSettings.INSTANCE.cycleChannel();
@@ -709,6 +932,30 @@ public final class JafuV2Screen extends Screen {
         double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
         double value = setting.min() + percent * (setting.max() - setting.min());
         ItemViewSettings.INSTANCE.setValue(setting, value);
+    }
+
+    private void updateScrollableTooltipSlider(Rect card, ScrollableTooltipNumericSetting setting, double mouseX) {
+        int rowIndex = ScrollableTooltipNumericSetting.all().indexOf(setting) + 1;
+        Rect slider = scrollableTooltipSlider(card, rowIndex);
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = setting.min() + percent * (setting.max() - setting.min());
+        ScrollableTooltipsSettings.INSTANCE.setValue(setting, value);
+    }
+
+    private void updateItemValueSlider(Rect card, ItemValueNumericSetting setting, double mouseX) {
+        int rowIndex = ItemValueOverlayOption.all().size() + ItemValueNumericSetting.all().indexOf(setting);
+        Rect slider = itemValueSlider(card, rowIndex);
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = setting.min() + percent * (setting.max() - setting.min());
+        ItemValueOverlaySettings.INSTANCE.setValue(setting, value);
+    }
+
+    private void updateCooldownSeconds(Rect card, double mouseX) {
+        Rect slider = cooldownSecondsSlider(card);
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = CooldownDisplaySettings.MIN_COOLDOWN_SECONDS
+                + percent * (CooldownDisplaySettings.MAX_COOLDOWN_SECONDS - CooldownDisplaySettings.MIN_COOLDOWN_SECONDS);
+        CooldownDisplaySettings.INSTANCE.setCooldownSeconds(value);
     }
 
     private void updateAnimationClock(long nowMillis) {
@@ -859,7 +1106,19 @@ public final class JafuV2Screen extends Screen {
             return 178;
         }
         if (JafuModules.CHAT_ENHANCEMENTS.equals(module.id())) {
-            return 148;
+            return 184;
+        }
+        if (JafuModules.SCROLLABLE_TOOLTIPS.equals(module.id())) {
+            return 226;
+        }
+        if (JafuModules.STORAGE_INDEXER.equals(module.id())) {
+            return 136;
+        }
+        if (JafuModules.ITEM_VALUE_OVERLAY.equals(module.id())) {
+            return 266;
+        }
+        if (JafuModules.COOLDOWN_DISPLAY.equals(module.id())) {
+            return 232;
         }
         if (JafuModules.AUTO_UPDATER.equals(module.id())) {
             return 140;
@@ -924,6 +1183,63 @@ public final class JafuV2Screen extends Screen {
     private static Rect chatScaleSlider(Rect card) {
         Rect row = chatScaleRow(card);
         return new Rect(row.x(), row.y() + 14, Math.max(30, row.width() - 48), 3);
+    }
+
+    private static Rect scrollableTooltipSlider(Rect card, int rowIndex) {
+        Rect row = optionRow(card, rowIndex);
+        return new Rect(row.x(), row.y() + 14, Math.max(30, row.width() - 50), 3);
+    }
+
+    private static Rect itemValueSlider(Rect card, int rowIndex) {
+        Rect row = optionRow(card, rowIndex);
+        return new Rect(row.x(), row.y() + 14, Math.max(30, row.width() - 50), 3);
+    }
+
+    private static Rect cooldownSecondsSlider(Rect card) {
+        Rect row = optionRow(card, CooldownDisplayOption.all().size());
+        return new Rect(row.x(), row.y() + 14, Math.max(30, row.width() - 50), 3);
+    }
+
+    private void drawCooldownColorSwatches(DrawContext context, Rect card, Rect row) {
+        for (CooldownDisplayColorOption option : CooldownDisplayColorOption.all()) {
+            Rect swatch = cooldownColorSwatch(card, option);
+            boolean selected = CooldownDisplaySettings.INSTANCE.textColor() == option.color();
+            GuiDraw.fill(context, new Rect(swatch.x() - 1, swatch.y() - 1, swatch.width() + 2, swatch.height() + 2), selected ? WARM : CARD_BORDER);
+            GuiDraw.fill(context, swatch, option.color());
+        }
+        CooldownDisplayColorOption current = CooldownDisplayColorOption.fromColor(CooldownDisplaySettings.INSTANCE.textColor());
+        GuiDraw.text(context, textRenderer, current.label(), row.right() - 34, row.y() + 5, MUTED);
+    }
+
+    private static Rect cooldownColorSwatch(Rect card, CooldownDisplayColorOption option) {
+        Rect row = optionRow(card, CooldownDisplayOption.all().size() + 1);
+        int size = 8;
+        int gap = 4;
+        int count = CooldownDisplayColorOption.all().size();
+        int startX = row.right() - 42 - count * size - (count - 1) * gap;
+        int index = CooldownDisplayColorOption.all().indexOf(option);
+        return new Rect(startX + index * (size + gap), row.y() + 5, size, size);
+    }
+
+    private void drawScrollableTooltipColorSwatches(DrawContext context, Rect card, Rect row) {
+        for (ScrollableTooltipColorOption option : ScrollableTooltipColorOption.all()) {
+            Rect swatch = scrollableTooltipColorSwatch(card, option);
+            boolean selected = ScrollableTooltipsSettings.INSTANCE.scrollBarColor() == option.color();
+            GuiDraw.fill(context, new Rect(swatch.x() - 1, swatch.y() - 1, swatch.width() + 2, swatch.height() + 2), selected ? WARM : CARD_BORDER);
+            GuiDraw.fill(context, swatch, option.color());
+        }
+        ScrollableTooltipColorOption current = ScrollableTooltipColorOption.fromColor(ScrollableTooltipsSettings.INSTANCE.scrollBarColor());
+        GuiDraw.text(context, textRenderer, current.label(), row.right() - 34, row.y() + 5, MUTED);
+    }
+
+    private static Rect scrollableTooltipColorSwatch(Rect card, ScrollableTooltipColorOption option) {
+        Rect row = optionRow(card, ScrollableTooltipNumericSetting.all().size() + 1);
+        int size = 8;
+        int gap = 4;
+        int count = ScrollableTooltipColorOption.all().size();
+        int startX = row.right() - 42 - count * size - (count - 1) * gap;
+        int index = ScrollableTooltipColorOption.all().indexOf(option);
+        return new Rect(startX + index * (size + gap), row.y() + 5, size, size);
     }
 
     private static Rect updaterChannelButton(Rect card) {
@@ -1011,6 +1327,10 @@ public final class JafuV2Screen extends Screen {
 
     private static String formatScale(double value) {
         return String.format("%.2f", value);
+    }
+
+    private static String formatCooldownSeconds(double value) {
+        return String.format("%.1fs", value);
     }
 
     private static int withAlpha(int rgb, double alpha) {

@@ -6,6 +6,7 @@ import dev.jafu.client.feature.general.etherwarp.EtherwarpFeature;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.mining.powder.PowderChestFeature;
 import dev.jafu.client.feature.mining.sacks.SacksStashFeature;
+import dev.jafu.client.feature.qol.cooldown.CooldownDisplayFeature;
 import net.fabricmc.api.ClientModInitializer;
 
 public final class JafuClient implements ClientModInitializer {
@@ -18,6 +19,7 @@ public final class JafuClient implements ClientModInitializer {
         EtherwarpFeature.register();
         PowderChestFeature.register();
         SacksStashFeature.register();
+        CooldownDisplayFeature.register();
         AutoUpdater.register();
     }
 }
