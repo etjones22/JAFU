@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
 import dev.jafu.client.gui.CleanFont;
 import dev.jafu.client.gui.JafuTheme;
@@ -155,7 +154,7 @@ public final class PowderChestHud {
     }
 
     private static void drawText(DrawContext context, TextRenderer textRenderer, String text, int x, int y, int color) {
-        if (ChatEnhancementsSettings.INSTANCE.cleanFontEnabled()) {
+        if (GlobalSettings.INSTANCE.customFontEnabled()) {
             CleanFont.draw(context, textRenderer, text, x, y, color);
             return;
         }
@@ -163,14 +162,14 @@ public final class PowderChestHud {
     }
 
     private static int lineHeight() {
-        if (!ChatEnhancementsSettings.INSTANCE.cleanFontEnabled()) {
+        if (!GlobalSettings.INSTANCE.customFontEnabled()) {
             return BASE_LINE_HEIGHT;
         }
         return Math.max(BASE_LINE_HEIGHT, (int) Math.ceil(BASE_LINE_HEIGHT * GlobalSettings.INSTANCE.textScale()));
     }
 
     private static int scaledTextWidthLimit(int width) {
-        if (!ChatEnhancementsSettings.INSTANCE.cleanFontEnabled()) {
+        if (!GlobalSettings.INSTANCE.customFontEnabled()) {
             return width;
         }
         return Math.max(40, (int) Math.floor(width / GlobalSettings.INSTANCE.textScale()));

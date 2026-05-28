@@ -1,6 +1,6 @@
 package dev.jafu.client.gui.util;
 
-import dev.jafu.client.feature.general.guisettings.GuiSettings;
+import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
 import dev.jafu.client.gui.CleanFont;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -29,8 +29,8 @@ public final class GuiDraw {
             int y,
             int color
     ) {
-        if (GuiSettings.INSTANCE.customFontEnabled()) {
-            CleanFont.draw(context, textRenderer, text, x, y, color, 1.0D);
+        if (GlobalSettings.INSTANCE.customFontEnabled()) {
+            CleanFont.draw(context, textRenderer, text, x, y, color);
             return;
         }
         context.drawText(textRenderer, text, x, y, color, false);

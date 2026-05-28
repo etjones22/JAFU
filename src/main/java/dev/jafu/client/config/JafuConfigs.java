@@ -2,7 +2,6 @@ package dev.jafu.client.config;
 
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
-import dev.jafu.client.feature.general.guisettings.GuiSettings;
 import dev.jafu.client.feature.general.itemview.ItemViewSetting;
 import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdaterSettings;
@@ -18,7 +17,6 @@ public final class JafuConfigs {
 
     public static void bootstrap() {
         GlobalSettings.INSTANCE.font();
-        GuiSettings.INSTANCE.customFontEnabled();
         ChatEnhancementsSettings.INSTANCE.configuredChatScale();
         ItemViewSettings.INSTANCE.value(ItemViewSetting.SIZE);
         AutoUpdaterSettings.INSTANCE.channel();

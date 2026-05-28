@@ -1,6 +1,7 @@
 package dev.jafu.client.mixin;
 
 import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
+import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
 import dev.jafu.client.gui.CleanFont;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -90,7 +91,7 @@ public abstract class ChatHudMixin {
 
     @Unique
     private Text jafu$cleanMessage(Text message) {
-        if (!ChatEnhancementsSettings.INSTANCE.cleanFontEnabled()) {
+        if (!GlobalSettings.INSTANCE.customFontEnabled()) {
             return message;
         }
         return CleanFont.apply(message);

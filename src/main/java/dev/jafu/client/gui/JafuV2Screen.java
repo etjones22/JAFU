@@ -9,7 +9,6 @@ import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.feature.general.globalsettings.ClickGuiVersion;
 import dev.jafu.client.feature.general.globalsettings.GlobalFontOption;
 import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
-import dev.jafu.client.feature.general.guisettings.GuiSettings;
 import dev.jafu.client.feature.general.itemview.ItemViewSetting;
 import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
@@ -369,7 +368,9 @@ public final class JafuV2Screen extends Screen {
     private void drawGlobalSettingsOptions(DrawContext context, Rect card) {
         GuiDraw.text(context, textRenderer, "Shared settings", card.x() + 14, card.y() + 48, MUTED);
 
-        Rect fontRow = optionRow(card, 0);
+        drawCheckboxRow(context, optionRow(card, 0), "Custom font", GlobalSettings.INSTANCE.customFontEnabled(), "global:custom_font");
+
+        Rect fontRow = optionRow(card, 1);
         Rect fontControl = globalFontControl(card);
         GuiDraw.text(context, textRenderer, "Font", fontRow.x(), fontRow.y() + 5, JafuTheme.TEXT);
         GuiDraw.fill(context, fontControl, CARD_BORDER);
@@ -390,9 +391,8 @@ public final class JafuV2Screen extends Screen {
 
     private void drawGuiSettingsOptions(DrawContext context, Rect card) {
         GuiDraw.text(context, textRenderer, "Menu appearance", card.x() + 14, card.y() + 48, MUTED);
-        drawCheckboxRow(context, optionRow(card, 0), "Custom GUI font", GuiSettings.INSTANCE.customFontEnabled(), "gui:custom_font");
 
-        Rect versionRow = optionRow(card, 1);
+        Rect versionRow = optionRow(card, 0);
         GuiDraw.text(context, textRenderer, "ClickGUI", versionRow.x(), versionRow.y() + 5, JafuTheme.TEXT);
         drawVersionButton(context, card, ClickGuiVersion.V1);
         drawVersionButton(context, card, ClickGuiVersion.V2);
@@ -607,6 +607,11 @@ public final class JafuV2Screen extends Screen {
     }
 
     private boolean toggleGlobalSettingsOption(Rect card, Click click) {
+        if (optionRow(card, 0).contains(click.x(), click.y())) {
+            GlobalSettings.INSTANCE.toggleCustomFont();
+            return true;
+        }
+
         Rect fontControl = globalFontControl(card);
         if (globalFontDropdownOpen) {
             GlobalFontOption[] options = GlobalFontOption.values();
@@ -635,10 +640,6 @@ public final class JafuV2Screen extends Screen {
     }
 
     private boolean toggleGuiSettingsOption(Rect card, Click click) {
-        if (optionRow(card, 0).contains(click.x(), click.y())) {
-            GuiSettings.INSTANCE.toggleCustomFont();
-            return true;
-        }
         if (versionButton(card, ClickGuiVersion.V1).contains(click.x(), click.y())) {
             JafuScreens.switchTo(ClickGuiVersion.V1);
             return true;
@@ -863,8 +864,11 @@ public final class JafuV2Screen extends Screen {
         if (JafuModules.AUTO_UPDATER.equals(module.id())) {
             return 140;
         }
-        if (JafuModules.GLOBAL_SETTINGS.equals(module.id()) || JafuModules.GUI_SETTINGS.equals(module.id())) {
-            return JafuModules.GLOBAL_SETTINGS.equals(module.id()) && globalFontDropdownOpen ? 198 : 130;
+        if (JafuModules.GLOBAL_SETTINGS.equals(module.id())) {
+            return globalFontDropdownOpen ? 218 : 150;
+        }
+        if (JafuModules.GUI_SETTINGS.equals(module.id())) {
+            return 96;
         }
         return 64;
     }
@@ -885,7 +889,7 @@ public final class JafuV2Screen extends Screen {
     }
 
     private static Rect globalFontControl(Rect card) {
-        Rect row = optionRow(card, 0);
+        Rect row = optionRow(card, 1);
         return new Rect(row.right() - 86, row.y(), 86, 16);
     }
 
@@ -894,7 +898,7 @@ public final class JafuV2Screen extends Screen {
     }
 
     private Rect globalTextScaleRow(Rect card) {
-        return optionRow(card, globalFontDropdownOpen ? GlobalFontOption.values().length + 1 : 1);
+        return optionRow(card, globalFontDropdownOpen ? GlobalFontOption.values().length + 2 : 2);
     }
 
     private Rect globalTextScaleSlider(Rect card) {
@@ -903,7 +907,7 @@ public final class JafuV2Screen extends Screen {
     }
 
     private static Rect versionButton(Rect card, ClickGuiVersion version) {
-        Rect row = optionRow(card, 1);
+        Rect row = optionRow(card, 0);
         int buttonWidth = 38;
         return new Rect(row.right() - buttonWidth * 2 + version.ordinal() * buttonWidth, row.y(), buttonWidth, 18);
     }

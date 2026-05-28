@@ -9,7 +9,6 @@ import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.feature.general.globalsettings.ClickGuiVersion;
 import dev.jafu.client.feature.general.globalsettings.GlobalFontOption;
 import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
-import dev.jafu.client.feature.general.guisettings.GuiSettings;
 import dev.jafu.client.feature.general.itemview.ItemViewSetting;
 import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
@@ -560,30 +559,29 @@ public final class JafuScreen extends Screen {
     private void drawGuiSettingsOptions(DrawContext context, Rect detailPanel) {
         GuiDraw.text(context, textRenderer, "Menu appearance", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
 
-        Rect row = trackerOptionRow(detailPanel, 0);
-        Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
-        boolean enabled = GuiSettings.INSTANCE.customFontEnabled();
-
-        drawCheckbox(context, checkbox, enabled, "gui:custom_font");
-        GuiDraw.text(context, textRenderer, "Custom GUI font", row.x() + 18, row.y() + 4, enabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
-
-        Rect clickGuiRow = trackerOptionRow(detailPanel, 1);
+        Rect clickGuiRow = trackerOptionRow(detailPanel, 0);
         GuiDraw.text(context, textRenderer, "ClickGUI", clickGuiRow.x(), clickGuiRow.y() + 4, JafuTheme.TEXT);
-        drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V1, 1);
-        drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V2, 1);
+        drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V1, 0);
+        drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V2, 0);
     }
 
     private void drawGlobalSettingsOptions(DrawContext context, Rect detailPanel) {
         GuiDraw.text(context, textRenderer, "Shared text settings", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
 
-        Rect fontRow = trackerOptionRow(detailPanel, 0);
+        Rect customFontRow = trackerOptionRow(detailPanel, 0);
+        Rect customFontCheckbox = new Rect(customFontRow.x(), customFontRow.y() + 3, 10, 10);
+        boolean customFontEnabled = GlobalSettings.INSTANCE.customFontEnabled();
+        drawCheckbox(context, customFontCheckbox, customFontEnabled, "global:custom_font");
+        GuiDraw.text(context, textRenderer, "Custom font", customFontRow.x() + 18, customFontRow.y() + 4, customFontEnabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+
+        Rect fontRow = trackerOptionRow(detailPanel, 1);
         Rect fontControl = globalFontControl(detailPanel);
         GuiDraw.text(context, textRenderer, "Nice font", fontRow.x(), fontRow.y() + 4, JafuTheme.TEXT);
         GuiDraw.fill(context, fontControl, JafuTheme.CONTROL);
         GuiDraw.text(context, textRenderer, GlobalSettings.INSTANCE.font().label(), fontControl.x() + 8, fontControl.y() + 4, JafuTheme.ACCENT);
         GuiDraw.text(context, textRenderer, "v", fontControl.right() - 10, fontControl.y() + 4, JafuTheme.TEXT_MUTED);
 
-        Rect sizeRow = trackerOptionRow(detailPanel, 1);
+        Rect sizeRow = trackerOptionRow(detailPanel, 2);
         Rect slider = globalTextScaleSlider(detailPanel);
         double value = GlobalSettings.INSTANCE.textScale();
         double percent = (value - GlobalSettings.MIN_TEXT_SCALE) / (GlobalSettings.MAX_TEXT_SCALE - GlobalSettings.MIN_TEXT_SCALE);
@@ -596,7 +594,7 @@ public final class JafuScreen extends Screen {
         GuiDraw.fill(context, new Rect(slider.x(), slider.y(), knobX - slider.x(), slider.height()), JafuTheme.ACCENT_SOFT);
         GuiDraw.fill(context, new Rect(knobX - 2, slider.y() - 2, 4, slider.height() + 4), JafuTheme.ACCENT);
 
-        Rect clickGuiRow = trackerOptionRow(detailPanel, 2);
+        Rect clickGuiRow = trackerOptionRow(detailPanel, 3);
         GuiDraw.text(context, textRenderer, "ClickGUI", clickGuiRow.x(), clickGuiRow.y() + 4, JafuTheme.TEXT);
         drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V1);
         drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V2);
@@ -607,7 +605,7 @@ public final class JafuScreen extends Screen {
     }
 
     private void drawClickGuiVersionButton(DrawContext context, Rect detailPanel, ClickGuiVersion version) {
-        drawClickGuiVersionButton(context, detailPanel, version, 2);
+        drawClickGuiVersionButton(context, detailPanel, version, 3);
     }
 
     private void drawClickGuiVersionButton(DrawContext context, Rect detailPanel, ClickGuiVersion version, int rowIndex) {
@@ -805,16 +803,12 @@ public final class JafuScreen extends Screen {
             return false;
         }
 
-        if (trackerOptionRow(layout.detailPanel(), 0).contains(click.x(), click.y())) {
-            GuiSettings.INSTANCE.toggleCustomFont();
-            return true;
-        }
         Rect detailPanel = layout.detailPanel();
-        if (clickGuiVersionButton(detailPanel, ClickGuiVersion.V1, 1).contains(click.x(), click.y())) {
+        if (clickGuiVersionButton(detailPanel, ClickGuiVersion.V1, 0).contains(click.x(), click.y())) {
             JafuScreens.switchTo(ClickGuiVersion.V1);
             return true;
         }
-        if (clickGuiVersionButton(detailPanel, ClickGuiVersion.V2, 1).contains(click.x(), click.y())) {
+        if (clickGuiVersionButton(detailPanel, ClickGuiVersion.V2, 0).contains(click.x(), click.y())) {
             JafuScreens.switchTo(ClickGuiVersion.V2);
             return true;
         }
@@ -829,6 +823,11 @@ public final class JafuScreen extends Screen {
         }
 
         Rect detailPanel = layout.detailPanel();
+        if (trackerOptionRow(detailPanel, 0).contains(click.x(), click.y())) {
+            GlobalSettings.INSTANCE.toggleCustomFont();
+            return true;
+        }
+
         Rect fontControl = globalFontControl(detailPanel);
         if (globalFontDropdownOpen) {
             GlobalFontOption[] options = GlobalFontOption.values();
@@ -847,7 +846,7 @@ public final class JafuScreen extends Screen {
         }
 
         globalFontDropdownOpen = false;
-        if (trackerOptionRow(detailPanel, 1).contains(click.x(), click.y())) {
+        if (trackerOptionRow(detailPanel, 2).contains(click.x(), click.y())) {
             draggingGlobalTextScale = true;
             updateGlobalTextScale(layout, click.x());
             return true;
@@ -1079,7 +1078,7 @@ public final class JafuScreen extends Screen {
     }
 
     private static Rect globalFontControl(Rect detailPanel) {
-        Rect row = trackerOptionRow(detailPanel, 0);
+        Rect row = trackerOptionRow(detailPanel, 1);
         return new Rect(row.right() - 82, row.y(), 82, 16);
     }
 
@@ -1088,12 +1087,12 @@ public final class JafuScreen extends Screen {
     }
 
     private static Rect globalTextScaleSlider(Rect detailPanel) {
-        Rect row = trackerOptionRow(detailPanel, 1);
+        Rect row = trackerOptionRow(detailPanel, 2);
         return new Rect(row.x() + 62, row.y() + 7, Math.max(30, row.width() - 108), 4);
     }
 
     private static Rect clickGuiVersionButton(Rect detailPanel, ClickGuiVersion version) {
-        return clickGuiVersionButton(detailPanel, version, 2);
+        return clickGuiVersionButton(detailPanel, version, 3);
     }
 
     private static Rect clickGuiVersionButton(Rect detailPanel, ClickGuiVersion version, int rowIndex) {

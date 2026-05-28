@@ -3,8 +3,7 @@ package dev.jafu.client.feature.general.chat;
 import java.util.List;
 
 public enum ChatEnhancementOption {
-    SMOOTH_CHAT("smooth_chat", "Smooth chat"),
-    CLEAN_FONT("clean_font", "Clean font");
+    SMOOTH_CHAT("smooth_chat", "Smooth chat");
 
     private static final List<ChatEnhancementOption> VALUES = List.of(values());
 

@@ -14,6 +14,7 @@ public final class GlobalSettings implements JafuConfigurable {
     private final ConfigFile config = ConfigFile.named("jafu-global.properties");
     private GlobalFontOption font = GlobalFontOption.CLEAN;
     private ClickGuiVersion clickGuiVersion = ClickGuiVersion.V1;
+    private boolean customFontEnabled = false;
     private double textScale = 1.0D;
 
     private GlobalSettings() {
@@ -51,6 +52,20 @@ public final class GlobalSettings implements JafuConfigurable {
         save();
     }
 
+    public boolean customFontEnabled() {
+        return customFontEnabled;
+    }
+
+    public void toggleCustomFont() {
+        customFontEnabled = !customFontEnabled;
+        save();
+    }
+
+    public void setCustomFontEnabled(boolean customFontEnabled) {
+        this.customFontEnabled = customFontEnabled;
+        save();
+    }
+
     public double textScale() {
         return textScale;
     }
@@ -68,9 +83,13 @@ public final class GlobalSettings implements JafuConfigurable {
 
         font = GlobalFontOption.CLEAN;
         clickGuiVersion = ClickGuiVersion.V1;
+        customFontEnabled = false;
         textScale = 1.0D;
         font = GlobalFontOption.fromId(config.stringValue("font", font.id()));
         clickGuiVersion = ClickGuiVersion.fromId(config.stringValue("click_gui_version", clickGuiVersion.id()));
+        customFontEnabled = config.contains("custom_font")
+                ? config.booleanValue("custom_font", customFontEnabled)
+                : migratedCustomFontEnabled();
         textScale = config.doubleValue("text_scale", textScale);
         textScale = snap(textScale, MIN_TEXT_SCALE, MAX_TEXT_SCALE, TEXT_SCALE_STEP);
         return true;
@@ -81,8 +100,17 @@ public final class GlobalSettings implements JafuConfigurable {
         config.clear();
         config.setString("font", font.id());
         config.setString("click_gui_version", clickGuiVersion.id());
+        config.setBoolean("custom_font", customFontEnabled);
         config.setDouble("text_scale", textScale);
         return config.save("JAFU global settings");
+    }
+
+    private boolean migratedCustomFontEnabled() {
+        ConfigFile legacyConfig = ConfigFile.named("jafu-gui.properties");
+        if (!legacyConfig.load() || !legacyConfig.contains("custom_font")) {
+            return false;
+        }
+        return legacyConfig.booleanValue("custom_font", false);
     }
 
     private static double snap(double value, double min, double max, double step) {

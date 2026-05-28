@@ -40,10 +40,6 @@ public final class ChatEnhancementsSettings implements JafuConfigurable {
         return JafuModules.isEnabled(JafuModules.CHAT_ENHANCEMENTS) && isEnabled(ChatEnhancementOption.SMOOTH_CHAT);
     }
 
-    public boolean cleanFontEnabled() {
-        return JafuModules.isEnabled(JafuModules.CHAT_ENHANCEMENTS) && isEnabled(ChatEnhancementOption.CLEAN_FONT);
-    }
-
     public double chatScale() {
         if (!JafuModules.isEnabled(JafuModules.CHAT_ENHANCEMENTS)) {
             return 1.0D;
