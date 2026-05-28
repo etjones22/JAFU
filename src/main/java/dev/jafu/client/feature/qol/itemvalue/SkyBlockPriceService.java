@@ -22,11 +22,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 public final class SkyBlockPriceService {
-    public static final SkyBlockPriceService INSTANCE = new SkyBlockPriceService();
-
     private static final String BAZAAR_URL = "https://api.hypixel.net/v2/skyblock/bazaar";
     private static final String AUCTIONS_URL = "https://api.hypixel.net/v2/skyblock/auctions?page=";
     private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(12L);
+
+    public static final SkyBlockPriceService INSTANCE = new SkyBlockPriceService();
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(HTTP_TIMEOUT)
