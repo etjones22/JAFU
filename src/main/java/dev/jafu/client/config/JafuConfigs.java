@@ -13,6 +13,7 @@ import dev.jafu.client.feature.mining.sacks.SacksStashSettings;
 import dev.jafu.client.feature.qol.cooldown.CooldownDisplaySettings;
 import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlaySettings;
 import dev.jafu.client.feature.qol.modhider.ModHiderSettings;
+import dev.jafu.client.feature.qol.tokenguard.TokenGuardSettings;
 import dev.jafu.client.feature.skyblock.storage.StorageIndexStore;
 import dev.jafu.client.feature.skyblock.storage.StorageIndexerSettings;
 import dev.jafu.client.hud.HudLayoutStore;
@@ -32,6 +33,7 @@ public final class JafuConfigs {
         PowderChestSettings.INSTANCE.visibleStatCount();
         SacksStashSettings.INSTANCE.isVisible(SacksStashOption.SESSION_TOTAL);
         ModHiderSettings.INSTANCE.enabled();
+        TokenGuardSettings.INSTANCE.enabled();
         ItemValueOverlaySettings.INSTANCE.enabled();
         CooldownDisplaySettings.INSTANCE.enabled();
         HudLayoutStore.INSTANCE.configId();

@@ -6,6 +6,7 @@ import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipsModule;
 import dev.jafu.client.feature.qol.cooldown.CooldownDisplayModule;
 import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlayModule;
 import dev.jafu.client.feature.qol.modhider.ModHiderSettings;
+import dev.jafu.client.feature.qol.tokenguard.TokenGuardSettings;
 import dev.jafu.client.feature.skyblock.storage.StorageIndexerModule;
 import dev.jafu.client.gui.JafuTheme;
 
@@ -20,6 +21,7 @@ public final class JafuModules {
     public static final String GUI_SETTINGS = "gui_settings";
     public static final String FULLBRIGHT = "fullbright";
     public static final String MOD_HIDER = "mod_hider";
+    public static final String TOKEN_GUARD = "token_guard";
     public static final String ITEM_VALUE_OVERLAY = "item_value_overlay";
     public static final String COOLDOWN_DISPLAY = "cooldown_display";
     public static final String SCROLLABLE_TOOLTIPS = "scrollable_tooltips";
@@ -34,6 +36,7 @@ public final class JafuModules {
             new JafuModule(CHAT_ENHANCEMENTS, JafuCategory.GENERAL, "Chat enhancements", "Smooth chat and clean typography", false, JafuTheme.GOOD),
             new JafuModule(AUTO_UPDATER, JafuCategory.GENERAL, "Auto updater", "Installs stable or snapshot releases on next launch", true, JafuTheme.ACCENT),
             new JafuModule(MOD_HIDER, JafuCategory.QOL, "Mod Hider", "Blocks selected client mod announcers", ModHiderSettings.INSTANCE.enabled(), JafuTheme.ACCENT),
+            new JafuModule(TOKEN_GUARD, JafuCategory.QOL, "TokenGuard", "Blocks suspicious access to your Minecraft session token", TokenGuardSettings.INSTANCE.enabled(), JafuTheme.WARN),
             new CooldownDisplayModule(),
             new ItemValueOverlayModule(),
             new ScrollableTooltipsModule(),

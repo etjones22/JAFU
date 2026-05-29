@@ -20,6 +20,46 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 @Mixin(HeldItemRenderer.class)
 public abstract class HeldItemRendererMixin {
     @Inject(
+            method = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;I)V",
+            at = @At("HEAD")
+    )
+    private void jafu$beginFirstPersonItem(
+            AbstractClientPlayerEntity player,
+            float tickProgress,
+            float pitch,
+            Hand hand,
+            float swingProgress,
+            ItemStack item,
+            float equipProgress,
+            MatrixStack matrices,
+            OrderedRenderCommandQueue queue,
+            int light,
+            CallbackInfo ci
+    ) {
+        ItemViewModelTransform.beginFirstPersonItem(player, hand);
+    }
+
+    @Inject(
+            method = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;I)V",
+            at = @At("RETURN")
+    )
+    private void jafu$endFirstPersonItem(
+            AbstractClientPlayerEntity player,
+            float tickProgress,
+            float pitch,
+            Hand hand,
+            float swingProgress,
+            ItemStack item,
+            float equipProgress,
+            MatrixStack matrices,
+            OrderedRenderCommandQueue queue,
+            int light,
+            CallbackInfo ci
+    ) {
+        ItemViewModelTransform.endFirstPersonItem();
+    }
+
+    @Inject(
             method = "renderItem(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/item/ItemStack;Lnet/minecraft/item/ItemDisplayContext;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;I)V",
             at = @At("HEAD")
     )

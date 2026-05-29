@@ -32,6 +32,7 @@ import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlayOption;
 import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlaySettings;
 import dev.jafu.client.feature.qol.itemvalue.PriceCacheStatus;
 import dev.jafu.client.feature.qol.modhider.ModHiderSettings;
+import dev.jafu.client.feature.qol.tokenguard.TokenGuardSettings;
 import dev.jafu.client.feature.skyblock.storage.StorageIndexStore;
 import dev.jafu.client.feature.skyblock.storage.StorageSnapshot;
 import dev.jafu.client.gui.util.GuiDraw;
@@ -58,6 +59,7 @@ public final class JafuScreen extends Screen {
     private ItemViewSetting draggingItemViewSetting;
     private ScrollableTooltipNumericSetting draggingTooltipSetting;
     private ItemValueNumericSetting draggingItemValueSetting;
+    private boolean draggingPowderAutoResetSeconds;
     private boolean draggingCooldownSeconds;
     private boolean draggingGlobalTextScale;
     private boolean draggingChatScale;
@@ -219,6 +221,11 @@ public final class JafuScreen extends Screen {
             return true;
         }
 
+        if (draggingPowderAutoResetSeconds) {
+            updatePowderAutoResetSeconds(JafuLayout.fromScreen(width, height), click.x());
+            return true;
+        }
+
         if (draggingCooldownSeconds) {
             updateCooldownSeconds(JafuLayout.fromScreen(width, height), click.x());
             return true;
@@ -255,6 +262,11 @@ public final class JafuScreen extends Screen {
 
         if (draggingItemValueSetting != null) {
             draggingItemValueSetting = null;
+            return true;
+        }
+
+        if (draggingPowderAutoResetSeconds) {
+            draggingPowderAutoResetSeconds = false;
             return true;
         }
 
@@ -331,6 +343,8 @@ public final class JafuScreen extends Screen {
                 module.toggle();
                 if (JafuModules.MOD_HIDER.equals(module.id())) {
                     ModHiderSettings.INSTANCE.setEnabled(module.enabled());
+                } else if (JafuModules.TOKEN_GUARD.equals(module.id())) {
+                    TokenGuardSettings.INSTANCE.setEnabled(module.enabled());
                 }
                 detailTransitionStartedAtMillis = System.currentTimeMillis();
                 selectedModuleIndex = i;
@@ -479,12 +493,10 @@ public final class JafuScreen extends Screen {
         );
 
         int fourthLineY = thirdLineY + 30;
-        String fourthLine = "Mod integrity checker";
-        String fifthLine = "Verifies this build's hash/signature";
+        String fourthLine = "Mod Integrity: Success=false | Hash=unavailable";
         GuiDraw.text(context, textRenderer, fourthLine, creditsPanel.x() + (creditsPanel.width() - textRenderer.getWidth(fourthLine)) / 2, fourthLineY, JafuTheme.ACCENT);
-        GuiDraw.text(context, textRenderer, fifthLine, creditsPanel.x() + (creditsPanel.width() - textRenderer.getWidth(fifthLine)) / 2, fourthLineY + 14, JafuTheme.TEXT_MUTED);
 
-        drawCreditsPulseBar(context, new Rect(creditsPanel.x() + 48, fourthLineY + 36, creditsPanel.width() - 96, 2), nowMillis + 700L);
+        drawCreditsPulseBar(context, new Rect(creditsPanel.x() + 48, fourthLineY + 24, creditsPanel.width() - 96, 2), nowMillis + 700L);
     }
 
     private void drawCreditsPulseBar(DrawContext context, Rect bar, long nowMillis) {
@@ -622,6 +634,26 @@ public final class JafuScreen extends Screen {
             drawCheckbox(context, checkbox, visible, "powder:" + option.id());
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
+
+        Rect autoResetRow = powderAutoResetRow(detailPanel);
+        Rect autoResetCheckbox = new Rect(autoResetRow.x(), autoResetRow.y() + 3, 10, 10);
+        boolean autoReset = PowderChestSettings.INSTANCE.autoResetEnabled();
+        drawCheckbox(context, autoResetCheckbox, autoReset, "powder:auto_reset");
+        GuiDraw.text(context, textRenderer, "Auto Reset", autoResetRow.x() + 18, autoResetRow.y() + 4, autoReset ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+
+        Rect secondsRow = powderAutoResetSecondsRow(detailPanel);
+        Rect secondsSlider = powderAutoResetSecondsSlider(detailPanel);
+        double seconds = PowderChestSettings.INSTANCE.autoResetSeconds();
+        double percent = (seconds - PowderChestSettings.MIN_AUTO_RESET_SECONDS)
+                / (PowderChestSettings.MAX_AUTO_RESET_SECONDS - PowderChestSettings.MIN_AUTO_RESET_SECONDS);
+        double animatedPercent = animatedSlider("powder:auto_reset_seconds", percent);
+        int knobX = secondsSlider.x() + (int) Math.round(animatedPercent * secondsSlider.width());
+
+        GuiDraw.text(context, textRenderer, "Reset after", secondsRow.x(), secondsRow.y() + 4, autoReset ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+        GuiDraw.text(context, textRenderer, formatPowderAutoResetSeconds(seconds), secondsRow.right() - 48, secondsRow.y() + 4, JafuTheme.TEXT_MUTED);
+        GuiDraw.fill(context, secondsSlider, JafuTheme.CONTROL);
+        GuiDraw.fill(context, new Rect(secondsSlider.x(), secondsSlider.y(), knobX - secondsSlider.x(), secondsSlider.height()), autoReset ? JafuTheme.ACCENT_SOFT : JafuTheme.CONTROL);
+        GuiDraw.fill(context, new Rect(knobX - 2, secondsSlider.y() - 2, 4, secondsSlider.height() + 4), autoReset ? JafuTheme.ACCENT : JafuTheme.TEXT_MUTED);
 
         Rect resetButton = powderTrackerResetButton(detailPanel);
         GuiDraw.text(context, textRenderer, "Session", detailPanel.x() + 16, resetButton.y() - 16, JafuTheme.TEXT_MUTED);
@@ -977,6 +1009,17 @@ public final class JafuScreen extends Screen {
             }
         }
 
+        if (powderAutoResetRow(detailPanel).contains(click.x(), click.y())) {
+            PowderChestSettings.INSTANCE.toggleAutoReset();
+            return true;
+        }
+
+        if (expanded(powderAutoResetSecondsSlider(detailPanel), 4).contains(click.x(), click.y())) {
+            draggingPowderAutoResetSeconds = true;
+            updatePowderAutoResetSeconds(layout, click.x());
+            return true;
+        }
+
         if (powderTrackerResetButton(detailPanel).contains(click.x(), click.y())) {
             PowderChestFeature.resetTracker();
             return true;
@@ -1252,6 +1295,14 @@ public final class JafuScreen extends Screen {
         ItemValueOverlaySettings.INSTANCE.setValue(setting, value);
     }
 
+    private void updatePowderAutoResetSeconds(JafuLayout layout, double mouseX) {
+        Rect slider = powderAutoResetSecondsSlider(layout.detailPanel());
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = PowderChestSettings.MIN_AUTO_RESET_SECONDS
+                + percent * (PowderChestSettings.MAX_AUTO_RESET_SECONDS - PowderChestSettings.MIN_AUTO_RESET_SECONDS);
+        PowderChestSettings.INSTANCE.setAutoResetSeconds(value);
+    }
+
     private void updateCooldownSeconds(JafuLayout layout, double mouseX) {
         Rect slider = cooldownSecondsSlider(layout.detailPanel());
         double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
@@ -1381,8 +1432,21 @@ public final class JafuScreen extends Screen {
         return trackerOptionRow(detailPanel, index);
     }
 
+    private static Rect powderAutoResetRow(Rect detailPanel) {
+        return trackerOptionRow(detailPanel, PowderChestStatOption.all().size());
+    }
+
+    private static Rect powderAutoResetSecondsRow(Rect detailPanel) {
+        return trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 1);
+    }
+
+    private static Rect powderAutoResetSecondsSlider(Rect detailPanel) {
+        Rect row = powderAutoResetSecondsRow(detailPanel);
+        return new Rect(row.x() + 74, row.y() + 7, Math.max(30, row.width() - 130), 4);
+    }
+
     private static Rect powderTrackerResetButton(Rect detailPanel) {
-        Rect row = trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 1);
+        Rect row = trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 3);
         return new Rect(row.x(), row.y(), 82, 18);
     }
 
@@ -1499,6 +1563,19 @@ public final class JafuScreen extends Screen {
 
     private static String formatScale(double value) {
         return String.format("%.2f", value);
+    }
+
+    private static String formatPowderAutoResetSeconds(double value) {
+        int seconds = (int) Math.round(value);
+        if (seconds < 60) {
+            return seconds + "s";
+        }
+        int minutes = seconds / 60;
+        int remainingSeconds = seconds % 60;
+        if (remainingSeconds == 0) {
+            return minutes + "m";
+        }
+        return minutes + "m " + remainingSeconds + "s";
     }
 
     private static String formatCooldownSeconds(double value) {

@@ -32,6 +32,7 @@ import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlayOption;
 import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlaySettings;
 import dev.jafu.client.feature.qol.itemvalue.PriceCacheStatus;
 import dev.jafu.client.feature.qol.modhider.ModHiderSettings;
+import dev.jafu.client.feature.qol.tokenguard.TokenGuardSettings;
 import dev.jafu.client.feature.skyblock.storage.StorageIndexStore;
 import dev.jafu.client.feature.skyblock.storage.StorageSnapshot;
 import dev.jafu.client.gui.util.GuiDraw;
@@ -73,6 +74,7 @@ public final class JafuV2Screen extends Screen {
     private ItemViewSetting draggingItemViewSetting;
     private ScrollableTooltipNumericSetting draggingTooltipSetting;
     private ItemValueNumericSetting draggingItemValueSetting;
+    private boolean draggingPowderAutoResetSeconds;
     private boolean draggingCooldownSeconds;
     private long lastFrameMillis;
     private double animationBlend = 1.0D;
@@ -165,6 +167,10 @@ public final class JafuV2Screen extends Screen {
             updateItemValueSlider(card, draggingItemValueSetting, click.x());
             return true;
         }
+        if (draggingPowderAutoResetSeconds) {
+            updatePowderAutoResetSeconds(card, click.x());
+            return true;
+        }
         if (draggingCooldownSeconds) {
             updateCooldownSeconds(card, click.x());
             return true;
@@ -186,12 +192,13 @@ public final class JafuV2Screen extends Screen {
 
     @Override
     public boolean mouseReleased(Click click) {
-        boolean wasDragging = draggingGlobalTextScale || draggingChatScale || draggingItemViewSetting != null || draggingTooltipSetting != null || draggingItemValueSetting != null || draggingCooldownSeconds;
+        boolean wasDragging = draggingGlobalTextScale || draggingChatScale || draggingItemViewSetting != null || draggingTooltipSetting != null || draggingItemValueSetting != null || draggingPowderAutoResetSeconds || draggingCooldownSeconds;
         draggingGlobalTextScale = false;
         draggingChatScale = false;
         draggingItemViewSetting = null;
         draggingTooltipSetting = null;
         draggingItemValueSetting = null;
+        draggingPowderAutoResetSeconds = false;
         draggingCooldownSeconds = false;
         if (wasDragging) {
             return true;
@@ -397,6 +404,16 @@ public final class JafuV2Screen extends Screen {
             drawCheckboxRow(context, optionRow(card, i), option.label(), PowderChestSettings.INSTANCE.isVisible(option), "powder:" + option.id());
         }
 
+        drawCheckboxRow(context, powderAutoResetRow(card), "Auto Reset", PowderChestSettings.INSTANCE.autoResetEnabled(), "powder:auto_reset");
+
+        Rect secondsRow = powderAutoResetSecondsRow(card);
+        double seconds = PowderChestSettings.INSTANCE.autoResetSeconds();
+        double percent = (seconds - PowderChestSettings.MIN_AUTO_RESET_SECONDS)
+                / (PowderChestSettings.MAX_AUTO_RESET_SECONDS - PowderChestSettings.MIN_AUTO_RESET_SECONDS);
+        GuiDraw.text(context, textRenderer, "Reset after", secondsRow.x(), secondsRow.y() + 5, PowderChestSettings.INSTANCE.autoResetEnabled() ? JafuTheme.TEXT : MUTED);
+        GuiDraw.text(context, textRenderer, formatPowderAutoResetSeconds(seconds), secondsRow.right() - 46, secondsRow.y() + 5, WARM);
+        drawSlider(context, powderAutoResetSecondsSlider(card), animatedSlider("v2:powder:auto_reset_seconds", percent));
+
         Rect reset = powderResetButton(card);
         GuiDraw.fill(context, reset, CARD_BORDER);
         GuiDraw.text(context, textRenderer, "Reset stats", reset.x() + 9, reset.y() + 5, WARM);
@@ -596,8 +613,7 @@ public final class JafuV2Screen extends Screen {
         GuiDraw.text(context, textRenderer, "Made with ChatGPT", area.x() + 18, area.y() + 58, JafuTheme.TEXT);
         GuiDraw.text(context, textRenderer, "Mashed together by Chorey", area.x() + 18, area.y() + 78, JafuTheme.WARN);
         GuiDraw.text(context, textRenderer, "All hail the LLM's", area.x() + 18, area.y() + 98, JafuTheme.GOOD);
-        GuiDraw.text(context, textRenderer, "Mod integrity checker", area.x() + 18, area.y() + 126, WARM);
-        GuiDraw.text(context, textRenderer, "Verifies this build's hash/signature", area.x() + 18, area.y() + 144, MUTED);
+        GuiDraw.text(context, textRenderer, "Mod Integrity: Success=false | Hash=unavailable", area.x() + 18, area.y() + 126, WARM);
     }
 
     private void drawCheckboxRow(DrawContext context, Rect row, String label, boolean checked, String key) {
@@ -688,6 +704,8 @@ public final class JafuV2Screen extends Screen {
                 module.toggle();
                 if (JafuModules.MOD_HIDER.equals(module.id())) {
                     ModHiderSettings.INSTANCE.setEnabled(module.enabled());
+                } else if (JafuModules.TOKEN_GUARD.equals(module.id())) {
+                    TokenGuardSettings.INSTANCE.setEnabled(module.enabled());
                 }
                 return true;
             }
@@ -738,6 +756,15 @@ public final class JafuV2Screen extends Screen {
                 PowderChestSettings.INSTANCE.toggle(options.get(i));
                 return true;
             }
+        }
+        if (powderAutoResetRow(card).contains(click.x(), click.y())) {
+            PowderChestSettings.INSTANCE.toggleAutoReset();
+            return true;
+        }
+        if (expanded(powderAutoResetSecondsSlider(card), 4).contains(click.x(), click.y())) {
+            draggingPowderAutoResetSeconds = true;
+            updatePowderAutoResetSeconds(card, click.x());
+            return true;
         }
         if (powderResetButton(card).contains(click.x(), click.y())) {
             PowderChestFeature.resetTracker();
@@ -950,6 +977,14 @@ public final class JafuV2Screen extends Screen {
         ItemValueOverlaySettings.INSTANCE.setValue(setting, value);
     }
 
+    private void updatePowderAutoResetSeconds(Rect card, double mouseX) {
+        Rect slider = powderAutoResetSecondsSlider(card);
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = PowderChestSettings.MIN_AUTO_RESET_SECONDS
+                + percent * (PowderChestSettings.MAX_AUTO_RESET_SECONDS - PowderChestSettings.MIN_AUTO_RESET_SECONDS);
+        PowderChestSettings.INSTANCE.setAutoResetSeconds(value);
+    }
+
     private void updateCooldownSeconds(Rect card, double mouseX) {
         Rect slider = cooldownSecondsSlider(card);
         double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
@@ -1143,8 +1178,21 @@ public final class JafuV2Screen extends Screen {
     }
 
     private static Rect powderResetButton(Rect card) {
-        Rect row = optionRow(card, PowderChestStatOption.all().size());
+        Rect row = optionRow(card, PowderChestStatOption.all().size() + 3);
         return new Rect(row.x(), row.y(), 82, 16);
+    }
+
+    private static Rect powderAutoResetRow(Rect card) {
+        return optionRow(card, PowderChestStatOption.all().size());
+    }
+
+    private static Rect powderAutoResetSecondsRow(Rect card) {
+        return optionRow(card, PowderChestStatOption.all().size() + 1);
+    }
+
+    private static Rect powderAutoResetSecondsSlider(Rect card) {
+        Rect row = powderAutoResetSecondsRow(card);
+        return new Rect(row.x(), row.y() + 14, Math.max(30, row.width() - 50), 3);
     }
 
     private static Rect globalFontControl(Rect card) {
@@ -1327,6 +1375,19 @@ public final class JafuV2Screen extends Screen {
 
     private static String formatScale(double value) {
         return String.format("%.2f", value);
+    }
+
+    private static String formatPowderAutoResetSeconds(double value) {
+        int seconds = (int) Math.round(value);
+        if (seconds < 60) {
+            return seconds + "s";
+        }
+        int minutes = seconds / 60;
+        int remainingSeconds = seconds % 60;
+        if (remainingSeconds == 0) {
+            return minutes + "m";
+        }
+        return minutes + "m " + remainingSeconds + "s";
     }
 
     private static String formatCooldownSeconds(double value) {

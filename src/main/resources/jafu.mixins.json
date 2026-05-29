@@ -10,7 +10,8 @@
     "HeldItemRendererMixin",
     "ItemStackTooltipMixin",
     "LightmapTextureManagerMixin",
-    "MouseTooltipInputMixin"
+    "MouseTooltipInputMixin",
+    "SessionMixin"
   ],
   "injectors": {
     "defaultRequire": 1
