@@ -53,11 +53,24 @@ public final class JafuHudElements {
             38
     );
 
+    public static final JafuHudElement GARDEN_RNG_CALCULATOR = new JafuHudElement(
+            JafuModules.GARDEN_RNG_CALCULATOR,
+            JafuModules.GARDEN_RNG_CALCULATOR,
+            "Garden RNG Calculator",
+            8,
+            302,
+            260,
+            142,
+            166,
+            80
+    );
+
     private static final List<JafuHudElement> ELEMENTS = List.of(
             POWDER_CHEST_TRACKER,
             ETHERWARP_HELPER,
             SACKS_STASH_TRACKER,
-            COOLDOWN_DISPLAY
+            COOLDOWN_DISPLAY,
+            GARDEN_RNG_CALCULATOR
     );
 
     private JafuHudElements() {

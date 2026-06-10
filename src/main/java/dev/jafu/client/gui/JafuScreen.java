@@ -15,6 +15,11 @@ import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.general.updater.AutoUpdaterSettings;
 import dev.jafu.client.feature.general.updater.UpdateChannel;
+import dev.jafu.client.feature.garden.rng.GardenDropFamily;
+import dev.jafu.client.feature.garden.rng.GardenDropState;
+import dev.jafu.client.feature.garden.rng.GardenRngFeature;
+import dev.jafu.client.feature.garden.rng.GardenRngSettings;
+import dev.jafu.client.feature.garden.rng.GardenRngStatOption;
 import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipColorOption;
 import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipNumericSetting;
 import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipsSettings;
@@ -51,6 +56,7 @@ public final class JafuScreen extends Screen {
     private static final String SUBTITLE = "Just A Few Updates";
     private static final String COMMAND = "/jafu";
     private static final String MOD_HIDER_TOOLTIP = "Blocks ModAnnouncer packets that mods like Firament send.";
+    private static final String TOKEN_GUARD_TOOLTIP = "Best effort only: mods in the same JVM can still try reflection or lower-level tricks.";
     private static final long SCREEN_ANIMATION_MILLIS = 180L;
     private static final long PANEL_TRANSITION_MILLIS = 160L;
 
@@ -154,6 +160,10 @@ public final class JafuScreen extends Screen {
         }
 
         if (toggleSacksStashTrackerOption(layout, click)) {
+            return true;
+        }
+
+        if (toggleGardenRngOption(layout, click)) {
             return true;
         }
 
@@ -597,6 +607,8 @@ public final class JafuScreen extends Screen {
             drawPowderTrackerOptions(context, detailPanel);
         } else if (JafuModules.SACKS_STASH_TRACKER.equals(selectedModule.id())) {
             drawSacksStashTrackerOptions(context, detailPanel);
+        } else if (JafuModules.GARDEN_RNG_CALCULATOR.equals(selectedModule.id())) {
+            drawGardenRngOptions(context, detailPanel);
         } else if (JafuModules.GLOBAL_SETTINGS.equals(selectedModule.id())) {
             drawGlobalSettingsOptions(context, detailPanel);
         } else if (JafuModules.GUI_SETTINGS.equals(selectedModule.id())) {
@@ -668,6 +680,68 @@ public final class JafuScreen extends Screen {
         GuiDraw.text(context, textRenderer, "ClickGUI", clickGuiRow.x(), clickGuiRow.y() + 4, JafuTheme.TEXT);
         drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V1, 0);
         drawClickGuiVersionButton(context, detailPanel, ClickGuiVersion.V2, 0);
+    }
+
+    private void drawGardenRngOptions(DrawContext context, Rect detailPanel) {
+        GuiDraw.text(context, textRenderer, "HUD fields", detailPanel.x() + 16, detailPanel.y() + 58, JafuTheme.TEXT_MUTED);
+        List<GardenRngStatOption> stats = GardenRngStatOption.all();
+        for (int i = 0; i < stats.size(); i++) {
+            GardenRngStatOption option = stats.get(i);
+            Rect row = trackerOptionRow(detailPanel, i);
+            Rect checkbox = new Rect(row.x(), row.y() + 3, 10, 10);
+            boolean visible = GardenRngSettings.INSTANCE.isVisible(option);
+            drawCheckbox(context, checkbox, visible, "garden:stat:" + option.id());
+            GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+        }
+
+        int rowIndex = gardenFamiliesStart();
+        GuiDraw.text(context, textRenderer, "Drop families", detailPanel.x() + 16, trackerOptionRow(detailPanel, rowIndex - 1).y() + 4, JafuTheme.TEXT_MUTED);
+        GardenDropFamily[] families = GardenDropFamily.values();
+        for (int i = 0; i < families.length; i++) {
+            GardenDropFamily family = families[i];
+            Rect row = trackerOptionRow(detailPanel, rowIndex + i);
+            boolean enabled = GardenRngSettings.INSTANCE.familyEnabled(family);
+            drawCheckbox(context, new Rect(row.x(), row.y() + 3, 10, 10), enabled, "garden:family:" + family.id());
+            GuiDraw.text(context, textRenderer, family.label(), row.x() + 18, row.y() + 4, enabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+        }
+
+        rowIndex = gardenTogglesStart();
+        drawGardenToggleRow(context, detailPanel, rowIndex, "Feast tracking", GardenRngSettings.INSTANCE.feastTracking(), "garden:feast");
+        drawGardenToggleRow(context, detailPanel, rowIndex + 1, "Assume active crop", GardenRngSettings.INSTANCE.assumeActiveCrop(), "garden:active_crop");
+        drawGardenToggleRow(context, detailPanel, rowIndex + 2, "Overbloom +50%", GardenRngSettings.INSTANCE.overbloomEnabled(), "garden:overbloom");
+        drawGardenToggleRow(context, detailPanel, rowIndex + 3, "Profit odds", GardenRngSettings.INSTANCE.showProfit(), "garden:profit");
+
+        Rect armorRow = trackerOptionRow(detailPanel, rowIndex + 4);
+        GuiDraw.text(context, textRenderer, "Armor pieces", armorRow.x(), armorRow.y() + 4, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, GardenRngSettings.INSTANCE.armorPieces() + "/4", armorRow.right() - 28, armorRow.y() + 4, JafuTheme.ACCENT);
+
+        Rect resetActive = gardenResetActiveButton(detailPanel);
+        Rect resetAll = gardenResetAllButton(detailPanel);
+        GuiDraw.fill(context, resetActive, JafuTheme.CONTROL);
+        GuiDraw.fill(context, resetAll, JafuTheme.CONTROL);
+        GuiDraw.text(context, textRenderer, "Reset active", resetActive.x() + 9, resetActive.y() + 6, JafuTheme.WARN);
+        GuiDraw.text(context, textRenderer, "Reset all", resetAll.x() + 16, resetAll.y() + 6, JafuTheme.WARN);
+
+        List<GardenDropState> activeDrops = GardenRngFeature.snapshot().drops().stream().limit(3).toList();
+        int rateStart = gardenRateRowsStart();
+        GuiDraw.text(context, textRenderer, "Rate multipliers", detailPanel.x() + 16, trackerOptionRow(detailPanel, rateStart - 1).y() + 4, JafuTheme.TEXT_MUTED);
+        if (activeDrops.isEmpty()) {
+            Rect row = trackerOptionRow(detailPanel, rateStart);
+            GuiDraw.text(context, textRenderer, "Harvest a crop to tune active drops.", row.x(), row.y() + 4, JafuTheme.TEXT_MUTED);
+            return;
+        }
+        for (int i = 0; i < activeDrops.size(); i++) {
+            GardenDropState drop = activeDrops.get(i);
+            Rect row = trackerOptionRow(detailPanel, rateStart + i);
+            GuiDraw.text(context, textRenderer, trimToWidth(drop.definition().displayName(), row.width() - 58), row.x(), row.y() + 4, drop.definition().color());
+            GuiDraw.text(context, textRenderer, "x" + formatScale(GardenRngSettings.INSTANCE.rateMultiplier(drop.definition().id())), row.right() - 34, row.y() + 4, JafuTheme.ACCENT);
+        }
+    }
+
+    private void drawGardenToggleRow(DrawContext context, Rect detailPanel, int index, String label, boolean enabled, String animationKey) {
+        Rect row = trackerOptionRow(detailPanel, index);
+        drawCheckbox(context, new Rect(row.x(), row.y() + 3, 10, 10), enabled, animationKey);
+        GuiDraw.text(context, textRenderer, label, row.x() + 18, row.y() + 4, enabled ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
     }
 
     private void drawGlobalSettingsOptions(DrawContext context, Rect detailPanel) {
@@ -974,6 +1048,10 @@ public final class JafuScreen extends Screen {
                 context.drawTooltip(textRenderer, Text.literal(MOD_HIDER_TOOLTIP), mouseX, mouseY);
                 return;
             }
+            if (JafuModules.TOKEN_GUARD.equals(module.id()) && layout.moduleRow(i).contains(mouseX, mouseY)) {
+                context.drawTooltip(textRenderer, Text.literal(TOKEN_GUARD_TOOLTIP), mouseX, mouseY);
+                return;
+            }
         }
     }
 
@@ -1038,6 +1116,71 @@ public final class JafuScreen extends Screen {
         for (int i = 0; i < options.size(); i++) {
             if (trackerOptionRow(detailPanel, i).contains(click.x(), click.y())) {
                 SacksStashSettings.INSTANCE.toggle(options.get(i));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean toggleGardenRngOption(JafuLayout layout, Click click) {
+        JafuModule selectedModule = selectedModule();
+        if (!JafuModules.GARDEN_RNG_CALCULATOR.equals(selectedModule.id())) {
+            return false;
+        }
+
+        Rect detailPanel = layout.detailPanel();
+        List<GardenRngStatOption> stats = GardenRngStatOption.all();
+        for (int i = 0; i < stats.size(); i++) {
+            if (trackerOptionRow(detailPanel, i).contains(click.x(), click.y())) {
+                GardenRngSettings.INSTANCE.toggleStat(stats.get(i));
+                return true;
+            }
+        }
+
+        GardenDropFamily[] families = GardenDropFamily.values();
+        int familiesStart = gardenFamiliesStart();
+        for (int i = 0; i < families.length; i++) {
+            if (trackerOptionRow(detailPanel, familiesStart + i).contains(click.x(), click.y())) {
+                GardenRngSettings.INSTANCE.toggleFamily(families[i]);
+                return true;
+            }
+        }
+
+        int togglesStart = gardenTogglesStart();
+        if (trackerOptionRow(detailPanel, togglesStart).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleFeastTracking();
+            return true;
+        }
+        if (trackerOptionRow(detailPanel, togglesStart + 1).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleAssumeActiveCrop();
+            return true;
+        }
+        if (trackerOptionRow(detailPanel, togglesStart + 2).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleOverbloom();
+            return true;
+        }
+        if (trackerOptionRow(detailPanel, togglesStart + 3).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleProfit();
+            return true;
+        }
+        if (trackerOptionRow(detailPanel, togglesStart + 4).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.cycleArmorPieces();
+            return true;
+        }
+        if (gardenResetActiveButton(detailPanel).contains(click.x(), click.y())) {
+            GardenRngFeature.resetActiveDrops();
+            return true;
+        }
+        if (gardenResetAllButton(detailPanel).contains(click.x(), click.y())) {
+            GardenRngFeature.resetAll();
+            return true;
+        }
+
+        List<GardenDropState> activeDrops = GardenRngFeature.snapshot().drops().stream().limit(3).toList();
+        int rateStart = gardenRateRowsStart();
+        for (int i = 0; i < activeDrops.size(); i++) {
+            if (trackerOptionRow(detailPanel, rateStart + i).contains(click.x(), click.y())) {
+                GardenRngSettings.INSTANCE.cycleRateMultiplier(activeDrops.get(i).definition().id());
                 return true;
             }
         }
@@ -1448,6 +1591,28 @@ public final class JafuScreen extends Screen {
     private static Rect powderTrackerResetButton(Rect detailPanel) {
         Rect row = trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 3);
         return new Rect(row.x(), row.y(), 82, 18);
+    }
+
+    private static int gardenFamiliesStart() {
+        return GardenRngStatOption.all().size() + 1;
+    }
+
+    private static int gardenTogglesStart() {
+        return gardenFamiliesStart() + GardenDropFamily.values().length + 1;
+    }
+
+    private static int gardenRateRowsStart() {
+        return gardenTogglesStart() + 8;
+    }
+
+    private static Rect gardenResetActiveButton(Rect detailPanel) {
+        Rect row = trackerOptionRow(detailPanel, gardenTogglesStart() + 6);
+        return new Rect(row.x(), row.y(), 92, 18);
+    }
+
+    private static Rect gardenResetAllButton(Rect detailPanel) {
+        Rect row = trackerOptionRow(detailPanel, gardenTogglesStart() + 6);
+        return new Rect(row.x() + 100, row.y(), 82, 18);
     }
 
     private static Rect trackerOptionRow(Rect detailPanel, int index) {

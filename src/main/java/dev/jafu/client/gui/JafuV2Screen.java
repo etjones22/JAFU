@@ -15,6 +15,11 @@ import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.general.updater.AutoUpdaterSettings;
 import dev.jafu.client.feature.general.updater.UpdateChannel;
+import dev.jafu.client.feature.garden.rng.GardenDropFamily;
+import dev.jafu.client.feature.garden.rng.GardenDropState;
+import dev.jafu.client.feature.garden.rng.GardenRngFeature;
+import dev.jafu.client.feature.garden.rng.GardenRngSettings;
+import dev.jafu.client.feature.garden.rng.GardenRngStatOption;
 import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipColorOption;
 import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipNumericSetting;
 import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipsSettings;
@@ -49,6 +54,7 @@ import net.minecraft.util.math.MathHelper;
 public final class JafuV2Screen extends Screen {
     private static final Text TITLE = Text.literal("JAFU V2");
     private static final String MOD_HIDER_TOOLTIP = "Blocks ModAnnouncer packets that mods like Firament send.";
+    private static final String TOKEN_GUARD_TOOLTIP = "Best effort only: mods in the same JVM can still try reflection or lower-level tricks.";
     private static final int PANEL = 0xEA0D0816;
     private static final int PANEL_DEEP = 0xF0070410;
     private static final int CARD = 0xB7171220;
@@ -373,6 +379,8 @@ public final class JafuV2Screen extends Screen {
             drawPowderTrackerOptions(context, card);
         } else if (JafuModules.SACKS_STASH_TRACKER.equals(module.id())) {
             drawSacksStashTrackerOptions(context, card);
+        } else if (JafuModules.GARDEN_RNG_CALCULATOR.equals(module.id())) {
+            drawGardenRngOptions(context, card);
         } else if (JafuModules.GLOBAL_SETTINGS.equals(module.id())) {
             drawGlobalSettingsOptions(context, card);
         } else if (JafuModules.GUI_SETTINGS.equals(module.id())) {
@@ -425,6 +433,55 @@ public final class JafuV2Screen extends Screen {
         for (int i = 0; i < options.size(); i++) {
             SacksStashOption option = options.get(i);
             drawCheckboxRow(context, optionRow(card, i), option.label(), SacksStashSettings.INSTANCE.isVisible(option), "sacks:" + option.id());
+        }
+    }
+
+    private void drawGardenRngOptions(DrawContext context, Rect card) {
+        GuiDraw.text(context, textRenderer, "HUD fields", card.x() + 14, card.y() + 48, MUTED);
+        List<GardenRngStatOption> stats = GardenRngStatOption.all();
+        for (int i = 0; i < stats.size(); i++) {
+            GardenRngStatOption option = stats.get(i);
+            drawCheckboxRow(context, optionRow(card, i), option.label(), GardenRngSettings.INSTANCE.isVisible(option), "garden:stat:" + option.id());
+        }
+
+        int familiesStart = gardenFamiliesStart();
+        GuiDraw.text(context, textRenderer, "Drop families", card.x() + 14, optionRow(card, familiesStart - 1).y() + 5, MUTED);
+        GardenDropFamily[] families = GardenDropFamily.values();
+        for (int i = 0; i < families.length; i++) {
+            GardenDropFamily family = families[i];
+            drawCheckboxRow(context, optionRow(card, familiesStart + i), family.label(), GardenRngSettings.INSTANCE.familyEnabled(family), "garden:family:" + family.id());
+        }
+
+        int togglesStart = gardenTogglesStart();
+        drawCheckboxRow(context, optionRow(card, togglesStart), "Feast tracking", GardenRngSettings.INSTANCE.feastTracking(), "garden:feast");
+        drawCheckboxRow(context, optionRow(card, togglesStart + 1), "Assume active crop", GardenRngSettings.INSTANCE.assumeActiveCrop(), "garden:active_crop");
+        drawCheckboxRow(context, optionRow(card, togglesStart + 2), "Overbloom +50%", GardenRngSettings.INSTANCE.overbloomEnabled(), "garden:overbloom");
+        drawCheckboxRow(context, optionRow(card, togglesStart + 3), "Profit odds", GardenRngSettings.INSTANCE.showProfit(), "garden:profit");
+
+        Rect armorRow = optionRow(card, togglesStart + 4);
+        GuiDraw.text(context, textRenderer, "Armor pieces", armorRow.x(), armorRow.y() + 5, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, GardenRngSettings.INSTANCE.armorPieces() + "/4", armorRow.right() - 26, armorRow.y() + 5, WARM);
+
+        Rect resetActive = gardenResetActiveButton(card);
+        Rect resetAll = gardenResetAllButton(card);
+        GuiDraw.fill(context, resetActive, CARD_BORDER);
+        GuiDraw.fill(context, resetAll, CARD_BORDER);
+        GuiDraw.text(context, textRenderer, "Reset active", resetActive.x() + 8, resetActive.y() + 5, WARM);
+        GuiDraw.text(context, textRenderer, "Reset all", resetAll.x() + 15, resetAll.y() + 5, WARM);
+
+        int rateStart = gardenRateRowsStart();
+        GuiDraw.text(context, textRenderer, "Rate multipliers", card.x() + 14, optionRow(card, rateStart - 1).y() + 5, MUTED);
+        List<GardenDropState> activeDrops = GardenRngFeature.snapshot().drops().stream().limit(3).toList();
+        if (activeDrops.isEmpty()) {
+            Rect row = optionRow(card, rateStart);
+            GuiDraw.text(context, textRenderer, "Harvest a crop to tune active drops.", row.x(), row.y() + 5, MUTED);
+            return;
+        }
+        for (int i = 0; i < activeDrops.size(); i++) {
+            GardenDropState drop = activeDrops.get(i);
+            Rect row = optionRow(card, rateStart + i);
+            GuiDraw.text(context, textRenderer, trimToWidth(drop.definition().displayName(), row.width() - 46), row.x(), row.y() + 5, drop.definition().color());
+            GuiDraw.text(context, textRenderer, "x" + formatScale(GardenRngSettings.INSTANCE.rateMultiplier(drop.definition().id())), row.right() - 34, row.y() + 5, WARM);
         }
     }
 
@@ -722,6 +779,9 @@ public final class JafuV2Screen extends Screen {
         if (JafuModules.SACKS_STASH_TRACKER.equals(module.id())) {
             return toggleSacksStashOption(card, click);
         }
+        if (JafuModules.GARDEN_RNG_CALCULATOR.equals(module.id())) {
+            return toggleGardenRngOption(card, click);
+        }
         if (JafuModules.GLOBAL_SETTINGS.equals(module.id())) {
             return toggleGlobalSettingsOption(card, click);
         }
@@ -778,6 +838,65 @@ public final class JafuV2Screen extends Screen {
         for (int i = 0; i < options.size(); i++) {
             if (optionRow(card, i).contains(click.x(), click.y())) {
                 SacksStashSettings.INSTANCE.toggle(options.get(i));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean toggleGardenRngOption(Rect card, Click click) {
+        List<GardenRngStatOption> stats = GardenRngStatOption.all();
+        for (int i = 0; i < stats.size(); i++) {
+            if (optionRow(card, i).contains(click.x(), click.y())) {
+                GardenRngSettings.INSTANCE.toggleStat(stats.get(i));
+                return true;
+            }
+        }
+
+        GardenDropFamily[] families = GardenDropFamily.values();
+        int familiesStart = gardenFamiliesStart();
+        for (int i = 0; i < families.length; i++) {
+            if (optionRow(card, familiesStart + i).contains(click.x(), click.y())) {
+                GardenRngSettings.INSTANCE.toggleFamily(families[i]);
+                return true;
+            }
+        }
+
+        int togglesStart = gardenTogglesStart();
+        if (optionRow(card, togglesStart).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleFeastTracking();
+            return true;
+        }
+        if (optionRow(card, togglesStart + 1).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleAssumeActiveCrop();
+            return true;
+        }
+        if (optionRow(card, togglesStart + 2).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleOverbloom();
+            return true;
+        }
+        if (optionRow(card, togglesStart + 3).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleProfit();
+            return true;
+        }
+        if (optionRow(card, togglesStart + 4).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.cycleArmorPieces();
+            return true;
+        }
+        if (gardenResetActiveButton(card).contains(click.x(), click.y())) {
+            GardenRngFeature.resetActiveDrops();
+            return true;
+        }
+        if (gardenResetAllButton(card).contains(click.x(), click.y())) {
+            GardenRngFeature.resetAll();
+            return true;
+        }
+
+        List<GardenDropState> activeDrops = GardenRngFeature.snapshot().drops().stream().limit(3).toList();
+        int rateStart = gardenRateRowsStart();
+        for (int i = 0; i < activeDrops.size(); i++) {
+            if (optionRow(card, rateStart + i).contains(click.x(), click.y())) {
+                GardenRngSettings.INSTANCE.cycleRateMultiplier(activeDrops.get(i).definition().id());
                 return true;
             }
         }
@@ -1047,8 +1166,13 @@ public final class JafuV2Screen extends Screen {
         }
         List<JafuModule> modules = visibleModules();
         for (int i = 0; i < modules.size(); i++) {
-            if (JafuModules.MOD_HIDER.equals(modules.get(i).id()) && moduleCard(panel, i).contains(mouseX, mouseY)) {
+            JafuModule module = modules.get(i);
+            if (JafuModules.MOD_HIDER.equals(module.id()) && moduleCard(panel, i).contains(mouseX, mouseY)) {
                 context.drawTooltip(textRenderer, Text.literal(MOD_HIDER_TOOLTIP), mouseX, mouseY);
+                return;
+            }
+            if (JafuModules.TOKEN_GUARD.equals(module.id()) && moduleCard(panel, i).contains(mouseX, mouseY)) {
+                context.drawTooltip(textRenderer, Text.literal(TOKEN_GUARD_TOOLTIP), mouseX, mouseY);
                 return;
             }
         }
@@ -1137,6 +1261,9 @@ public final class JafuV2Screen extends Screen {
         if (JafuModules.SACKS_STASH_TRACKER.equals(module.id())) {
             return 164;
         }
+        if (JafuModules.GARDEN_RNG_CALCULATOR.equals(module.id())) {
+            return 436;
+        }
         if (JafuModules.ITEM_VIEW.equals(module.id())) {
             return 178;
         }
@@ -1193,6 +1320,28 @@ public final class JafuV2Screen extends Screen {
     private static Rect powderAutoResetSecondsSlider(Rect card) {
         Rect row = powderAutoResetSecondsRow(card);
         return new Rect(row.x(), row.y() + 14, Math.max(30, row.width() - 50), 3);
+    }
+
+    private static int gardenFamiliesStart() {
+        return GardenRngStatOption.all().size() + 1;
+    }
+
+    private static int gardenTogglesStart() {
+        return gardenFamiliesStart() + GardenDropFamily.values().length + 1;
+    }
+
+    private static int gardenRateRowsStart() {
+        return gardenTogglesStart() + 8;
+    }
+
+    private static Rect gardenResetActiveButton(Rect card) {
+        Rect row = optionRow(card, gardenTogglesStart() + 6);
+        return new Rect(row.x(), row.y(), 88, 16);
+    }
+
+    private static Rect gardenResetAllButton(Rect card) {
+        Rect row = optionRow(card, gardenTogglesStart() + 6);
+        return new Rect(row.x() + 96, row.y(), 78, 16);
     }
 
     private static Rect globalFontControl(Rect card) {

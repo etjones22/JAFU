@@ -2,6 +2,7 @@ package dev.jafu.client.module;
 
 import java.util.List;
 
+import dev.jafu.client.feature.garden.rng.GardenRngModule;
 import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipsModule;
 import dev.jafu.client.feature.qol.cooldown.CooldownDisplayModule;
 import dev.jafu.client.feature.qol.itemvalue.ItemValueOverlayModule;
@@ -26,6 +27,7 @@ public final class JafuModules {
     public static final String COOLDOWN_DISPLAY = "cooldown_display";
     public static final String SCROLLABLE_TOOLTIPS = "scrollable_tooltips";
     public static final String STORAGE_INDEXER = "storage_indexer";
+    public static final String GARDEN_RNG_CALCULATOR = "garden_rng_calculator";
 
     private static final List<JafuModule> MODULES = List.of(
             new JafuModule(GLOBAL_SETTINGS, JafuCategory.GENERAL, "Global settings", "Shared font and text defaults", true, JafuTheme.ACCENT),
@@ -46,7 +48,7 @@ public final class JafuModules {
             new JafuModule(SACKS_STASH_TRACKER, JafuCategory.MINING, "Sacks/stash tracker", "Tracks sack gains and material stash totals", true, JafuTheme.GOOD),
             new JafuModule("profile_notes", JafuCategory.GENERAL, "Profile notes", "Quick notes for active SkyBlock goals", false, JafuTheme.WARN),
             new JafuModule("dungeon_checklist", JafuCategory.DUNGEONS, "Dungeon checklist", "Compact ready-check style reminders", false, JafuTheme.GOOD),
-            new JafuModule("garden_tracker", JafuCategory.GARDEN, "Garden tracker", "Visitor and crop todo surface", false, JafuTheme.WARN)
+            new GardenRngModule()
     );
 
     private JafuModules() {

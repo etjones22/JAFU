@@ -5,6 +5,7 @@ import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
 import dev.jafu.client.feature.general.itemview.ItemViewSetting;
 import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdaterSettings;
+import dev.jafu.client.feature.garden.rng.GardenRngSettings;
 import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipNumericSetting;
 import dev.jafu.client.feature.gui.scrollabletooltips.ScrollableTooltipsSettings;
 import dev.jafu.client.feature.mining.powder.PowderChestSettings;
@@ -30,6 +31,7 @@ public final class JafuConfigs {
         ScrollableTooltipsSettings.INSTANCE.value(ScrollableTooltipNumericSetting.MAX_HEIGHT_PERCENT);
         StorageIndexerSettings.INSTANCE.enabled();
         StorageIndexStore.INSTANCE.configId();
+        GardenRngSettings.INSTANCE.enabled();
         PowderChestSettings.INSTANCE.visibleStatCount();
         SacksStashSettings.INSTANCE.isVisible(SacksStashOption.SESSION_TOTAL);
         ModHiderSettings.INSTANCE.enabled();
