@@ -23,6 +23,51 @@ test {
     useJUnitPlatform()
 }
 
+def taunModsDir = new File(System.getProperty("user.home"), "AppData/Roaming/PrismLauncher/instances/Taun/minecraft/mods")
+
+tasks.register("deployTaunMod") {
+    group = "jafu"
+    description = "Copies the remapped JAFU jar into the Taun Prism instance mods folder."
+    dependsOn tasks.named("remapJar")
+    onlyIf {
+        taunModsDir.isDirectory()
+    }
+    doLast {
+        File targetDir = taunModsDir.canonicalFile
+        File expectedDir = new File(System.getProperty("user.home"), "AppData/Roaming/PrismLauncher/instances/Taun/minecraft/mods").canonicalFile
+        if (targetDir != expectedDir) {
+            throw new GradleException("Refusing to deploy outside Taun mods folder: ${targetDir}")
+        }
+
+        File[] oldJars = targetDir.listFiles({ dir, name ->
+            String lowerName = name.toLowerCase(Locale.ROOT)
+            lowerName ==~ /jafu-.*\.jar/ && !lowerName.contains("sources")
+        } as FilenameFilter)
+        oldJars?.each { file ->
+            try {
+                def lock = new RandomAccessFile(file, "rw")
+                lock.close()
+            } catch (Exception exception) {
+                throw new GradleException("Taun is using ${file.name}. Close the Taun Minecraft instance and rerun the build to replace it.", exception)
+            }
+            if (!file.delete()) {
+                throw new GradleException("Could not remove old JAFU jar: ${file}")
+            }
+        }
+
+        File jar = tasks.named("remapJar").get().archiveFile.get().asFile
+        copy {
+            from jar
+            into targetDir
+        }
+        println "Deployed ${jar.name} to ${targetDir}"
+    }
+}
+
+tasks.named("build") {
+    finalizedBy tasks.named("deployTaunMod")
+}
+
 processResources {
     inputs.property "version", project.version
 

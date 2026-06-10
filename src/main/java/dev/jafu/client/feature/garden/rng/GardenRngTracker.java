@@ -34,6 +34,7 @@ public final class GardenRngTracker {
             return;
         }
 
+        resetIfIdle(System.currentTimeMillis());
         GardenDropDefinitions.matchMessage(rawMessage).ifPresent(this::recordDrop);
     }
 
@@ -42,7 +43,9 @@ public final class GardenRngTracker {
             return GardenRngSnapshot.empty();
         }
 
-        long elapsedMillis = sessionStartMillis == 0L ? 0L : System.currentTimeMillis() - sessionStartMillis;
+        long nowMillis = System.currentTimeMillis();
+        resetIfIdle(nowMillis);
+        long elapsedMillis = sessionStartMillis == 0L ? 0L : nowMillis - sessionStartMillis;
         double attemptsPerHour = elapsedMillis <= 0L ? 0.0D : sessionAttempts * 3_600_000.0D / elapsedMillis;
         List<GardenDropState> drops = visibleDrops().stream()
                 .map(this::stateFor)
@@ -72,8 +75,16 @@ public final class GardenRngTracker {
         counters.remove(id);
     }
 
+    public void tick() {
+        if (!isEnabled()) {
+            return;
+        }
+        resetIfIdle(System.currentTimeMillis());
+    }
+
     private void recordHarvestAttempt(GardenCrop crop, BlockPos pos) {
         long nowMillis = System.currentTimeMillis();
+        resetIfIdle(nowMillis);
         if (pos != null && pos.equals(lastAttemptPos) && nowMillis - lastAttemptMillis < SAME_BLOCK_DEBOUNCE_MILLIS) {
             return;
         }
@@ -139,6 +150,15 @@ public final class GardenRngTracker {
 
     private static boolean isEnabled() {
         return GardenRngSettings.INSTANCE.enabled() && JafuModules.isEnabled(JafuModules.GARDEN_RNG_CALCULATOR);
+    }
+
+    private void resetIfIdle(long nowMillis) {
+        if (!GardenRngSettings.INSTANCE.autoResetEnabled() || lastAttemptMillis == 0L) {
+            return;
+        }
+        if (nowMillis - lastAttemptMillis >= GardenRngSettings.INSTANCE.autoResetMillis()) {
+            resetAll();
+        }
     }
 
     private static final class DropCounter {

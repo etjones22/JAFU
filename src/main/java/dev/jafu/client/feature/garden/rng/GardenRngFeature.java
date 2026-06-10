@@ -1,6 +1,7 @@
 package dev.jafu.client.feature.garden.rng;
 
 import dev.jafu.client.JafuClient;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.block.BlockState;
@@ -15,6 +16,7 @@ public final class GardenRngFeature {
     }
 
     public static void register() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> TRACKER.tick());
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> TRACKER.acceptMessage(message.getString()));
         HudElementRegistry.addLast(Identifier.of(JafuClient.MOD_ID, "garden_rng_calculator"), HUD::render);
     }

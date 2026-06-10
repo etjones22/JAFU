@@ -647,6 +647,11 @@ public final class JafuScreen extends Screen {
             GuiDraw.text(context, textRenderer, option.label(), row.x() + 18, row.y() + 4, visible ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
         }
 
+        Rect miningToolRow = powderMiningToolRow(detailPanel);
+        boolean miningToolOnly = PowderChestSettings.INSTANCE.onlyShowWithMiningTool();
+        drawCheckbox(context, new Rect(miningToolRow.x(), miningToolRow.y() + 3, 10, 10), miningToolOnly, "powder:mining_tool");
+        GuiDraw.text(context, textRenderer, "Only show with drill/pickaxe", miningToolRow.x() + 18, miningToolRow.y() + 4, miningToolOnly ? JafuTheme.TEXT : JafuTheme.TEXT_MUTED);
+
         Rect autoResetRow = powderAutoResetRow(detailPanel);
         Rect autoResetCheckbox = new Rect(autoResetRow.x(), autoResetRow.y() + 3, 10, 10);
         boolean autoReset = PowderChestSettings.INSTANCE.autoResetEnabled();
@@ -710,8 +715,14 @@ public final class JafuScreen extends Screen {
         drawGardenToggleRow(context, detailPanel, rowIndex + 1, "Assume active crop", GardenRngSettings.INSTANCE.assumeActiveCrop(), "garden:active_crop");
         drawGardenToggleRow(context, detailPanel, rowIndex + 2, "Overbloom +50%", GardenRngSettings.INSTANCE.overbloomEnabled(), "garden:overbloom");
         drawGardenToggleRow(context, detailPanel, rowIndex + 3, "Profit odds", GardenRngSettings.INSTANCE.showProfit(), "garden:profit");
+        drawGardenToggleRow(context, detailPanel, rowIndex + 4, "Only show with Wheat Hoe", GardenRngSettings.INSTANCE.onlyShowWithWheatHoe(), "garden:wheat_hoe");
+        drawGardenToggleRow(context, detailPanel, rowIndex + 5, "Auto reset idle", GardenRngSettings.INSTANCE.autoResetEnabled(), "garden:auto_reset");
 
-        Rect armorRow = trackerOptionRow(detailPanel, rowIndex + 4);
+        Rect resetSecondsRow = trackerOptionRow(detailPanel, rowIndex + 6);
+        GuiDraw.text(context, textRenderer, "Idle reset", resetSecondsRow.x(), resetSecondsRow.y() + 4, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, formatPowderAutoResetSeconds(GardenRngSettings.INSTANCE.autoResetSeconds()), resetSecondsRow.right() - 48, resetSecondsRow.y() + 4, JafuTheme.ACCENT);
+
+        Rect armorRow = trackerOptionRow(detailPanel, rowIndex + 7);
         GuiDraw.text(context, textRenderer, "Armor pieces", armorRow.x(), armorRow.y() + 4, JafuTheme.TEXT);
         GuiDraw.text(context, textRenderer, GardenRngSettings.INSTANCE.armorPieces() + "/4", armorRow.right() - 28, armorRow.y() + 4, JafuTheme.ACCENT);
 
@@ -1087,6 +1098,11 @@ public final class JafuScreen extends Screen {
             }
         }
 
+        if (powderMiningToolRow(detailPanel).contains(click.x(), click.y())) {
+            PowderChestSettings.INSTANCE.toggleOnlyShowWithMiningTool();
+            return true;
+        }
+
         if (powderAutoResetRow(detailPanel).contains(click.x(), click.y())) {
             PowderChestSettings.INSTANCE.toggleAutoReset();
             return true;
@@ -1164,6 +1180,18 @@ public final class JafuScreen extends Screen {
             return true;
         }
         if (trackerOptionRow(detailPanel, togglesStart + 4).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleOnlyShowWithWheatHoe();
+            return true;
+        }
+        if (trackerOptionRow(detailPanel, togglesStart + 5).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleAutoReset();
+            return true;
+        }
+        if (trackerOptionRow(detailPanel, togglesStart + 6).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.cycleAutoResetSeconds();
+            return true;
+        }
+        if (trackerOptionRow(detailPanel, togglesStart + 7).contains(click.x(), click.y())) {
             GardenRngSettings.INSTANCE.cycleArmorPieces();
             return true;
         }
@@ -1576,11 +1604,11 @@ public final class JafuScreen extends Screen {
     }
 
     private static Rect powderAutoResetRow(Rect detailPanel) {
-        return trackerOptionRow(detailPanel, PowderChestStatOption.all().size());
+        return trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 1);
     }
 
     private static Rect powderAutoResetSecondsRow(Rect detailPanel) {
-        return trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 1);
+        return trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 2);
     }
 
     private static Rect powderAutoResetSecondsSlider(Rect detailPanel) {
@@ -1589,8 +1617,12 @@ public final class JafuScreen extends Screen {
     }
 
     private static Rect powderTrackerResetButton(Rect detailPanel) {
-        Rect row = trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 3);
+        Rect row = trackerOptionRow(detailPanel, PowderChestStatOption.all().size() + 4);
         return new Rect(row.x(), row.y(), 82, 18);
+    }
+
+    private static Rect powderMiningToolRow(Rect detailPanel) {
+        return trackerOptionRow(detailPanel, PowderChestStatOption.all().size());
     }
 
     private static int gardenFamiliesStart() {
@@ -1602,16 +1634,16 @@ public final class JafuScreen extends Screen {
     }
 
     private static int gardenRateRowsStart() {
-        return gardenTogglesStart() + 8;
+        return gardenTogglesStart() + 11;
     }
 
     private static Rect gardenResetActiveButton(Rect detailPanel) {
-        Rect row = trackerOptionRow(detailPanel, gardenTogglesStart() + 6);
+        Rect row = trackerOptionRow(detailPanel, gardenTogglesStart() + 9);
         return new Rect(row.x(), row.y(), 92, 18);
     }
 
     private static Rect gardenResetAllButton(Rect detailPanel) {
-        Rect row = trackerOptionRow(detailPanel, gardenTogglesStart() + 6);
+        Rect row = trackerOptionRow(detailPanel, gardenTogglesStart() + 9);
         return new Rect(row.x() + 100, row.y(), 82, 18);
     }
 

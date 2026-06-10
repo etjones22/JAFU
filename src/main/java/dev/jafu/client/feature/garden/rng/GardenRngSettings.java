@@ -12,6 +12,8 @@ import net.minecraft.util.math.MathHelper;
 public final class GardenRngSettings implements JafuConfigurable {
     public static final GardenRngSettings INSTANCE = new GardenRngSettings();
     public static final double[] RATE_MULTIPLIER_PRESETS = {0.5D, 0.75D, 1.0D, 1.25D, 1.5D, 2.0D, 3.0D, 5.0D};
+    public static final double[] AUTO_RESET_SECONDS_PRESETS = {5.0D, 10.0D, 15.0D, 30.0D, 60.0D, 120.0D, 300.0D};
+    public static final double DEFAULT_AUTO_RESET_SECONDS = 15.0D;
 
     private final ConfigFile config = ConfigFile.named("jafu-garden-rng.properties");
     private final Map<GardenRngStatOption, Boolean> visibleStats = new EnumMap<>(GardenRngStatOption.class);
@@ -22,6 +24,9 @@ public final class GardenRngSettings implements JafuConfigurable {
     private boolean assumeActiveCrop = true;
     private boolean overbloomEnabled;
     private boolean showProfit = true;
+    private boolean onlyShowWithWheatHoe = true;
+    private boolean autoResetEnabled = true;
+    private double autoResetSeconds = DEFAULT_AUTO_RESET_SECONDS;
     private int armorPieces = 4;
 
     private GardenRngSettings() {
@@ -106,6 +111,45 @@ public final class GardenRngSettings implements JafuConfigurable {
         save();
     }
 
+    public boolean onlyShowWithWheatHoe() {
+        return onlyShowWithWheatHoe;
+    }
+
+    public void toggleOnlyShowWithWheatHoe() {
+        onlyShowWithWheatHoe = !onlyShowWithWheatHoe;
+        save();
+    }
+
+    public boolean autoResetEnabled() {
+        return autoResetEnabled;
+    }
+
+    public void toggleAutoReset() {
+        autoResetEnabled = !autoResetEnabled;
+        save();
+    }
+
+    public double autoResetSeconds() {
+        return autoResetSeconds;
+    }
+
+    public long autoResetMillis() {
+        return Math.round(autoResetSeconds * 1000.0D);
+    }
+
+    public void cycleAutoResetSeconds() {
+        double current = autoResetSeconds();
+        int nextIndex = 0;
+        for (int i = 0; i < AUTO_RESET_SECONDS_PRESETS.length; i++) {
+            if (Math.abs(AUTO_RESET_SECONDS_PRESETS[i] - current) < 0.001D) {
+                nextIndex = (i + 1) % AUTO_RESET_SECONDS_PRESETS.length;
+                break;
+            }
+        }
+        autoResetSeconds = AUTO_RESET_SECONDS_PRESETS[nextIndex];
+        save();
+    }
+
     public int armorPieces() {
         return armorPieces;
     }
@@ -167,6 +211,9 @@ public final class GardenRngSettings implements JafuConfigurable {
         assumeActiveCrop = config.booleanValue("assume_active_crop", true);
         overbloomEnabled = config.booleanValue("overbloom", false);
         showProfit = config.booleanValue("show_profit", true);
+        onlyShowWithWheatHoe = config.booleanValue("only_show_with_wheat_hoe", true);
+        autoResetEnabled = config.booleanValue("auto_reset", true);
+        autoResetSeconds = sanitizeAutoResetSeconds(config.doubleValue("auto_reset_seconds", DEFAULT_AUTO_RESET_SECONDS));
         armorPieces = MathHelper.clamp(config.intValue("armor_pieces", 4), 2, 4);
 
         for (GardenRngStatOption option : GardenRngStatOption.all()) {
@@ -190,6 +237,9 @@ public final class GardenRngSettings implements JafuConfigurable {
         config.setBoolean("assume_active_crop", assumeActiveCrop);
         config.setBoolean("overbloom", overbloomEnabled);
         config.setBoolean("show_profit", showProfit);
+        config.setBoolean("only_show_with_wheat_hoe", onlyShowWithWheatHoe);
+        config.setBoolean("auto_reset", autoResetEnabled);
+        config.setDouble("auto_reset_seconds", autoResetSeconds);
         config.setInt("armor_pieces", armorPieces);
         for (GardenRngStatOption option : GardenRngStatOption.all()) {
             config.setBoolean("stat." + option.id(), visibleStats.getOrDefault(option, true));
@@ -219,5 +269,18 @@ public final class GardenRngSettings implements JafuConfigurable {
 
     private static double sanitizeMultiplier(double multiplier) {
         return MathHelper.clamp(Math.round(multiplier * 100.0D) / 100.0D, 0.01D, 100.0D);
+    }
+
+    private static double sanitizeAutoResetSeconds(double seconds) {
+        double closest = DEFAULT_AUTO_RESET_SECONDS;
+        double distance = Double.MAX_VALUE;
+        for (double preset : AUTO_RESET_SECONDS_PRESETS) {
+            double presetDistance = Math.abs(seconds - preset);
+            if (presetDistance < distance) {
+                closest = preset;
+                distance = presetDistance;
+            }
+        }
+        return closest;
     }
 }

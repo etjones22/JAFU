@@ -412,6 +412,7 @@ public final class JafuV2Screen extends Screen {
             drawCheckboxRow(context, optionRow(card, i), option.label(), PowderChestSettings.INSTANCE.isVisible(option), "powder:" + option.id());
         }
 
+        drawCheckboxRow(context, powderMiningToolRow(card), "Only show with drill/pickaxe", PowderChestSettings.INSTANCE.onlyShowWithMiningTool(), "powder:mining_tool");
         drawCheckboxRow(context, powderAutoResetRow(card), "Auto Reset", PowderChestSettings.INSTANCE.autoResetEnabled(), "powder:auto_reset");
 
         Rect secondsRow = powderAutoResetSecondsRow(card);
@@ -457,8 +458,14 @@ public final class JafuV2Screen extends Screen {
         drawCheckboxRow(context, optionRow(card, togglesStart + 1), "Assume active crop", GardenRngSettings.INSTANCE.assumeActiveCrop(), "garden:active_crop");
         drawCheckboxRow(context, optionRow(card, togglesStart + 2), "Overbloom +50%", GardenRngSettings.INSTANCE.overbloomEnabled(), "garden:overbloom");
         drawCheckboxRow(context, optionRow(card, togglesStart + 3), "Profit odds", GardenRngSettings.INSTANCE.showProfit(), "garden:profit");
+        drawCheckboxRow(context, optionRow(card, togglesStart + 4), "Only show with Wheat Hoe", GardenRngSettings.INSTANCE.onlyShowWithWheatHoe(), "garden:wheat_hoe");
+        drawCheckboxRow(context, optionRow(card, togglesStart + 5), "Auto reset idle", GardenRngSettings.INSTANCE.autoResetEnabled(), "garden:auto_reset");
 
-        Rect armorRow = optionRow(card, togglesStart + 4);
+        Rect resetSecondsRow = optionRow(card, togglesStart + 6);
+        GuiDraw.text(context, textRenderer, "Idle reset", resetSecondsRow.x(), resetSecondsRow.y() + 5, GardenRngSettings.INSTANCE.autoResetEnabled() ? JafuTheme.TEXT : MUTED);
+        GuiDraw.text(context, textRenderer, formatPowderAutoResetSeconds(GardenRngSettings.INSTANCE.autoResetSeconds()), resetSecondsRow.right() - 46, resetSecondsRow.y() + 5, WARM);
+
+        Rect armorRow = optionRow(card, togglesStart + 7);
         GuiDraw.text(context, textRenderer, "Armor pieces", armorRow.x(), armorRow.y() + 5, JafuTheme.TEXT);
         GuiDraw.text(context, textRenderer, GardenRngSettings.INSTANCE.armorPieces() + "/4", armorRow.right() - 26, armorRow.y() + 5, WARM);
 
@@ -817,6 +824,10 @@ public final class JafuV2Screen extends Screen {
                 return true;
             }
         }
+        if (powderMiningToolRow(card).contains(click.x(), click.y())) {
+            PowderChestSettings.INSTANCE.toggleOnlyShowWithMiningTool();
+            return true;
+        }
         if (powderAutoResetRow(card).contains(click.x(), click.y())) {
             PowderChestSettings.INSTANCE.toggleAutoReset();
             return true;
@@ -880,6 +891,18 @@ public final class JafuV2Screen extends Screen {
             return true;
         }
         if (optionRow(card, togglesStart + 4).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleOnlyShowWithWheatHoe();
+            return true;
+        }
+        if (optionRow(card, togglesStart + 5).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.toggleAutoReset();
+            return true;
+        }
+        if (optionRow(card, togglesStart + 6).contains(click.x(), click.y())) {
+            GardenRngSettings.INSTANCE.cycleAutoResetSeconds();
+            return true;
+        }
+        if (optionRow(card, togglesStart + 7).contains(click.x(), click.y())) {
             GardenRngSettings.INSTANCE.cycleArmorPieces();
             return true;
         }
@@ -1256,13 +1279,13 @@ public final class JafuV2Screen extends Screen {
             return COLLAPSED_CARD_HEIGHT;
         }
         if (JafuModules.POWDER_CHEST_TRACKER.equals(module.id())) {
-            return 212;
+            return 234;
         }
         if (JafuModules.SACKS_STASH_TRACKER.equals(module.id())) {
             return 164;
         }
         if (JafuModules.GARDEN_RNG_CALCULATOR.equals(module.id())) {
-            return 436;
+            return 496;
         }
         if (JafuModules.ITEM_VIEW.equals(module.id())) {
             return 178;
@@ -1305,16 +1328,20 @@ public final class JafuV2Screen extends Screen {
     }
 
     private static Rect powderResetButton(Rect card) {
-        Rect row = optionRow(card, PowderChestStatOption.all().size() + 3);
+        Rect row = optionRow(card, PowderChestStatOption.all().size() + 4);
         return new Rect(row.x(), row.y(), 82, 16);
     }
 
-    private static Rect powderAutoResetRow(Rect card) {
+    private static Rect powderMiningToolRow(Rect card) {
         return optionRow(card, PowderChestStatOption.all().size());
     }
 
-    private static Rect powderAutoResetSecondsRow(Rect card) {
+    private static Rect powderAutoResetRow(Rect card) {
         return optionRow(card, PowderChestStatOption.all().size() + 1);
+    }
+
+    private static Rect powderAutoResetSecondsRow(Rect card) {
+        return optionRow(card, PowderChestStatOption.all().size() + 2);
     }
 
     private static Rect powderAutoResetSecondsSlider(Rect card) {
@@ -1331,16 +1358,16 @@ public final class JafuV2Screen extends Screen {
     }
 
     private static int gardenRateRowsStart() {
-        return gardenTogglesStart() + 8;
+        return gardenTogglesStart() + 11;
     }
 
     private static Rect gardenResetActiveButton(Rect card) {
-        Rect row = optionRow(card, gardenTogglesStart() + 6);
+        Rect row = optionRow(card, gardenTogglesStart() + 9);
         return new Rect(row.x(), row.y(), 88, 16);
     }
 
     private static Rect gardenResetAllButton(Rect card) {
-        Rect row = optionRow(card, gardenTogglesStart() + 6);
+        Rect row = optionRow(card, gardenTogglesStart() + 9);
         return new Rect(row.x() + 96, row.y(), 78, 16);
     }
 

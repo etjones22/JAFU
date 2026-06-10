@@ -18,6 +18,7 @@ public final class PowderChestSettings implements JafuConfigurable {
     private final Map<PowderChestStatOption, Boolean> visibleStats = new EnumMap<>(PowderChestStatOption.class);
     private final ConfigFile config = ConfigFile.named("jafu-powder-chest.properties");
     private boolean autoResetEnabled = true;
+    private boolean onlyShowWithMiningTool = true;
     private double autoResetSeconds = DEFAULT_AUTO_RESET_SECONDS;
 
     private PowderChestSettings() {
@@ -44,6 +45,15 @@ public final class PowderChestSettings implements JafuConfigurable {
 
     public boolean autoResetEnabled() {
         return autoResetEnabled;
+    }
+
+    public boolean onlyShowWithMiningTool() {
+        return onlyShowWithMiningTool;
+    }
+
+    public void toggleOnlyShowWithMiningTool() {
+        onlyShowWithMiningTool = !onlyShowWithMiningTool;
+        save();
     }
 
     public void toggleAutoReset() {
@@ -83,6 +93,7 @@ public final class PowderChestSettings implements JafuConfigurable {
         for (PowderChestStatOption option : PowderChestStatOption.all()) {
             visibleStats.put(option, config.booleanValue(option.id(), true));
         }
+        onlyShowWithMiningTool = config.booleanValue("only_show_with_mining_tool", true);
         autoResetEnabled = config.booleanValue("auto_reset", true);
         autoResetSeconds = snapSeconds(config.doubleValue("auto_reset_seconds", DEFAULT_AUTO_RESET_SECONDS));
         return true;
@@ -94,6 +105,7 @@ public final class PowderChestSettings implements JafuConfigurable {
         for (PowderChestStatOption option : PowderChestStatOption.all()) {
             config.setBoolean(option.id(), isVisible(option));
         }
+        config.setBoolean("only_show_with_mining_tool", onlyShowWithMiningTool);
         config.setBoolean("auto_reset", autoResetEnabled);
         config.setDouble("auto_reset_seconds", autoResetSeconds);
         return config.save("JAFU powder chest tracker");

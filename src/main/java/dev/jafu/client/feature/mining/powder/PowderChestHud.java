@@ -39,6 +39,9 @@ public final class PowderChestHud {
         if (!JafuModules.isEnabled(JafuModules.POWDER_CHEST_TRACKER) || client.player == null || client.options.hudHidden) {
             return;
         }
+        if (!PowderChestHeldItemFilter.shouldShow(client)) {
+            return;
+        }
 
         TextRenderer textRenderer = client.textRenderer;
         long nowMillis = System.currentTimeMillis();

@@ -31,6 +31,9 @@ public final class GardenRngHud {
         if (!JafuModules.isEnabled(JafuModules.GARDEN_RNG_CALCULATOR) || client.player == null || client.options.hudHidden) {
             return;
         }
+        if (!GardenRngHeldItemFilter.shouldShow(client)) {
+            return;
+        }
 
         GardenRngSnapshot snapshot = tracker.snapshot();
         int lineHeight = lineHeight();
