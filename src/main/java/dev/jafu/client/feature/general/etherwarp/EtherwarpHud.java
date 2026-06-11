@@ -5,6 +5,7 @@ import dev.jafu.client.gui.util.GuiDraw;
 import dev.jafu.client.gui.util.Rect;
 import dev.jafu.client.hud.HudLayoutStore;
 import dev.jafu.client.hud.JafuHudElements;
+import dev.jafu.client.hud.JafuHudChrome;
 import dev.jafu.client.module.JafuModules;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -15,7 +16,7 @@ import net.minecraft.item.ItemStack;
 
 public final class EtherwarpHud {
     private static final int WIDTH = 190;
-    private static final int HEIGHT = 50;
+    private static final int CONTENT_HEIGHT = 34;
     private static final long CLICK_INTERVAL_MILLIS = 100L;
 
     public void render(DrawContext context, RenderTickCounter tickCounter) {
@@ -34,24 +35,23 @@ public final class EtherwarpHud {
         Rect bounds = HudLayoutStore.INSTANCE.bounds(
                 JafuHudElements.ETHERWARP_HELPER,
                 WIDTH,
-                HEIGHT,
+                JafuHudChrome.extraHeight() + CONTENT_HEIGHT,
                 client.getWindow().getScaledWidth(),
                 client.getWindow().getScaledHeight()
         );
-        int x = bounds.x() + 4;
-        int y = bounds.y() + 4;
+        Rect content = JafuHudChrome.draw(context, textRenderer, bounds, "Etherwarp Helper", 0xFFFFFF55);
+        int x = content.x();
+        int y = content.y();
 
-        GuiDraw.fill(context, bounds, 0xAA101218);
-        GuiDraw.text(context, textRenderer, "Etherwarp Helper", x, y, 0xFFFFFF55);
-        GuiDraw.text(context, textRenderer, heldItem.displayName(), x, y + 12, JafuTheme.TEXT);
-        GuiDraw.text(context, textRenderer, useHeld ? "Use held: manual 10 CPS rhythm" : "Hold right click to time casts", x, y + 24, useHeld ? JafuTheme.GOOD : JafuTheme.TEXT_MUTED);
+        GuiDraw.text(context, textRenderer, heldItem.displayName(), x, y, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, useHeld ? "Use held: manual 10 CPS rhythm" : "Hold right click to time casts", x, y + 12, useHeld ? JafuTheme.GOOD : JafuTheme.TEXT_MUTED);
         drawCadenceBar(context, x, y, useHeld, System.currentTimeMillis());
     }
 
     private static void drawCadenceBar(DrawContext context, int x, int y, boolean active, long nowMillis) {
         int width = 116;
         int progress = active ? (int) (nowMillis % CLICK_INTERVAL_MILLIS * width / CLICK_INTERVAL_MILLIS) : 0;
-        Rect track = new Rect(x, y + 38, width, 5);
+        Rect track = new Rect(x, y + 26, width, 5);
         GuiDraw.fill(context, track, JafuTheme.CONTROL);
         if (active) {
             GuiDraw.fill(context, new Rect(track.x(), track.y(), progress, track.height()), JafuTheme.ACCENT);

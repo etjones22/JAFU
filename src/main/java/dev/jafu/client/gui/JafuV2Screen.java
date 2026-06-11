@@ -10,6 +10,7 @@ import dev.jafu.client.feature.general.chat.ChatEnhancementsSettings;
 import dev.jafu.client.feature.general.globalsettings.ClickGuiVersion;
 import dev.jafu.client.feature.general.globalsettings.GlobalFontOption;
 import dev.jafu.client.feature.general.globalsettings.GlobalSettings;
+import dev.jafu.client.feature.general.globalsettings.HudAccentColorOption;
 import dev.jafu.client.feature.general.itemview.ItemViewSetting;
 import dev.jafu.client.feature.general.itemview.ItemViewSettings;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
@@ -76,6 +77,8 @@ public final class JafuV2Screen extends Screen {
     private int selectedModuleIndex;
     private boolean globalFontDropdownOpen;
     private boolean draggingGlobalTextScale;
+    private boolean draggingHudBackgroundOpacity;
+    private boolean draggingHudBorderOpacity;
     private boolean draggingChatScale;
     private ItemViewSetting draggingItemViewSetting;
     private ScrollableTooltipNumericSetting draggingTooltipSetting;
@@ -157,6 +160,14 @@ public final class JafuV2Screen extends Screen {
             updateGlobalTextScale(card, click.x());
             return true;
         }
+        if (draggingHudBackgroundOpacity) {
+            updateHudBackgroundOpacity(card, click.x());
+            return true;
+        }
+        if (draggingHudBorderOpacity) {
+            updateHudBorderOpacity(card, click.x());
+            return true;
+        }
         if (draggingChatScale) {
             updateChatScale(card, click.x());
             return true;
@@ -198,8 +209,10 @@ public final class JafuV2Screen extends Screen {
 
     @Override
     public boolean mouseReleased(Click click) {
-        boolean wasDragging = draggingGlobalTextScale || draggingChatScale || draggingItemViewSetting != null || draggingTooltipSetting != null || draggingItemValueSetting != null || draggingPowderAutoResetSeconds || draggingCooldownSeconds;
+        boolean wasDragging = draggingGlobalTextScale || draggingHudBackgroundOpacity || draggingHudBorderOpacity || draggingChatScale || draggingItemViewSetting != null || draggingTooltipSetting != null || draggingItemValueSetting != null || draggingPowderAutoResetSeconds || draggingCooldownSeconds;
         draggingGlobalTextScale = false;
+        draggingHudBackgroundOpacity = false;
+        draggingHudBorderOpacity = false;
         draggingChatScale = false;
         draggingItemViewSetting = null;
         draggingTooltipSetting = null;
@@ -511,6 +524,31 @@ public final class JafuV2Screen extends Screen {
         GuiDraw.text(context, textRenderer, formatScale(value), sizeRow.right() - 34, sizeRow.y() + 5, WARM);
         drawSlider(context, globalTextScaleSlider(card), animatedSlider("v2:global:text_scale", percent));
 
+        Rect styleRow = globalHudStyleRow(card);
+        Rect styleControl = hudStyleButton(card);
+        GuiDraw.text(context, textRenderer, "HUD style", styleRow.x(), styleRow.y() + 5, JafuTheme.TEXT);
+        GuiDraw.fill(context, styleControl, CARD_BORDER);
+        GuiDraw.text(context, textRenderer, GlobalSettings.INSTANCE.hudStylePreset().label(), styleControl.x() + 8, styleControl.y() + 5, WARM);
+
+        Rect accentRow = globalHudAccentRow(card);
+        GuiDraw.text(context, textRenderer, "HUD accent", accentRow.x(), accentRow.y() + 5, JafuTheme.TEXT);
+        drawHudAccentSwatches(context, card, accentRow);
+
+        Rect backgroundRow = globalHudBackgroundOpacityRow(card);
+        double backgroundOpacity = GlobalSettings.INSTANCE.hudBackgroundOpacity();
+        GuiDraw.text(context, textRenderer, "HUD background", backgroundRow.x(), backgroundRow.y() + 5, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, formatPercent(backgroundOpacity), backgroundRow.right() - 38, backgroundRow.y() + 5, WARM);
+        drawSlider(context, hudBackgroundOpacitySlider(card), animatedSlider("v2:global:hud_background", hudOpacityPercent(backgroundOpacity)));
+
+        Rect borderRow = globalHudBorderOpacityRow(card);
+        double borderOpacity = GlobalSettings.INSTANCE.hudBorderOpacity();
+        GuiDraw.text(context, textRenderer, "HUD border", borderRow.x(), borderRow.y() + 5, JafuTheme.TEXT);
+        GuiDraw.text(context, textRenderer, formatPercent(borderOpacity), borderRow.right() - 38, borderRow.y() + 5, WARM);
+        drawSlider(context, hudBorderOpacitySlider(card), animatedSlider("v2:global:hud_border", hudOpacityPercent(borderOpacity)));
+
+        drawCheckboxRow(context, globalHudGradientRow(card), "Gradient line", GlobalSettings.INSTANCE.hudGradientLine(), "global:hud_gradient");
+        drawCheckboxRow(context, globalHudCompactRow(card), "Compact HUD", GlobalSettings.INSTANCE.hudCompactMode(), "global:hud_compact");
+
         if (globalFontDropdownOpen || globalFontDropdownAnimation > 0.01D) {
             drawGlobalFontDropdown(context, card, globalFontDropdownAnimation);
         }
@@ -726,6 +764,16 @@ public final class JafuV2Screen extends Screen {
             GuiDraw.fill(context, row, multiplyAlpha(selected ? WARM_DEEP : CARD_BORDER, progress));
             GuiDraw.text(context, textRenderer, options[i].label(), row.x() + 8, row.y() + 5, multiplyAlpha(selected ? WARM : MUTED, progress));
         }
+    }
+
+    private void drawHudAccentSwatches(DrawContext context, Rect card, Rect row) {
+        for (HudAccentColorOption option : HudAccentColorOption.all()) {
+            Rect swatch = hudAccentSwatch(card, option);
+            boolean selected = HudAccentColorOption.fromColor(GlobalSettings.INSTANCE.hudAccentColor()) == option;
+            GuiDraw.fill(context, new Rect(swatch.x() - 1, swatch.y() - 1, swatch.width() + 2, swatch.height() + 2), selected ? WARM : CARD_BORDER);
+            GuiDraw.fill(context, swatch, option.color());
+        }
+        GuiDraw.text(context, textRenderer, HudAccentColorOption.fromColor(GlobalSettings.INSTANCE.hudAccentColor()).label(), row.x() + 76, row.y() + 5, MUTED);
     }
 
     private boolean selectCategory(Rect panel, Click click) {
@@ -956,6 +1004,34 @@ public final class JafuV2Screen extends Screen {
             updateGlobalTextScale(card, click.x());
             return true;
         }
+        if (hudStyleButton(card).contains(click.x(), click.y())) {
+            GlobalSettings.INSTANCE.cycleHudStylePreset();
+            return true;
+        }
+        for (HudAccentColorOption option : HudAccentColorOption.all()) {
+            if (hudAccentSwatch(card, option).contains(click.x(), click.y())) {
+                GlobalSettings.INSTANCE.setHudAccentColor(option.color());
+                return true;
+            }
+        }
+        if (expanded(hudBackgroundOpacitySlider(card), 4).contains(click.x(), click.y())) {
+            draggingHudBackgroundOpacity = true;
+            updateHudBackgroundOpacity(card, click.x());
+            return true;
+        }
+        if (expanded(hudBorderOpacitySlider(card), 4).contains(click.x(), click.y())) {
+            draggingHudBorderOpacity = true;
+            updateHudBorderOpacity(card, click.x());
+            return true;
+        }
+        if (globalHudGradientRow(card).contains(click.x(), click.y())) {
+            GlobalSettings.INSTANCE.toggleHudGradientLine();
+            return true;
+        }
+        if (globalHudCompactRow(card).contains(click.x(), click.y())) {
+            GlobalSettings.INSTANCE.toggleHudCompactMode();
+            return true;
+        }
         return false;
     }
 
@@ -1086,6 +1162,22 @@ public final class JafuV2Screen extends Screen {
         double value = GlobalSettings.MIN_TEXT_SCALE
                 + percent * (GlobalSettings.MAX_TEXT_SCALE - GlobalSettings.MIN_TEXT_SCALE);
         GlobalSettings.INSTANCE.setTextScale(value);
+    }
+
+    private void updateHudBackgroundOpacity(Rect card, double mouseX) {
+        Rect slider = hudBackgroundOpacitySlider(card);
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = GlobalSettings.MIN_HUD_OPACITY
+                + percent * (GlobalSettings.MAX_HUD_OPACITY - GlobalSettings.MIN_HUD_OPACITY);
+        GlobalSettings.INSTANCE.setHudBackgroundOpacity(value);
+    }
+
+    private void updateHudBorderOpacity(Rect card, double mouseX) {
+        Rect slider = hudBorderOpacitySlider(card);
+        double percent = MathHelper.clamp((mouseX - slider.x()) / slider.width(), 0.0D, 1.0D);
+        double value = GlobalSettings.MIN_HUD_OPACITY
+                + percent * (GlobalSettings.MAX_HUD_OPACITY - GlobalSettings.MIN_HUD_OPACITY);
+        GlobalSettings.INSTANCE.setHudBorderOpacity(value);
     }
 
     private void updateChatScale(Rect card, double mouseX) {
@@ -1309,7 +1401,7 @@ public final class JafuV2Screen extends Screen {
             return 140;
         }
         if (JafuModules.GLOBAL_SETTINGS.equals(module.id())) {
-            return globalFontDropdownOpen ? 218 : 150;
+            return globalFontDropdownOpen ? 372 : 286;
         }
         if (JafuModules.GUI_SETTINGS.equals(module.id())) {
             return 96;
@@ -1381,11 +1473,64 @@ public final class JafuV2Screen extends Screen {
     }
 
     private Rect globalTextScaleRow(Rect card) {
-        return optionRow(card, globalFontDropdownOpen ? GlobalFontOption.values().length + 2 : 2);
+        return optionRow(card, globalTextScaleRowIndex());
     }
 
     private Rect globalTextScaleSlider(Rect card) {
         Rect row = globalTextScaleRow(card);
+        return new Rect(row.x(), row.y() + 14, Math.max(30, row.width() - 48), 3);
+    }
+
+    private int globalTextScaleRowIndex() {
+        return globalFontDropdownOpen ? GlobalFontOption.values().length + 2 : 2;
+    }
+
+    private Rect globalHudStyleRow(Rect card) {
+        return optionRow(card, globalTextScaleRowIndex() + 1);
+    }
+
+    private Rect globalHudAccentRow(Rect card) {
+        return optionRow(card, globalTextScaleRowIndex() + 2);
+    }
+
+    private Rect globalHudBackgroundOpacityRow(Rect card) {
+        return optionRow(card, globalTextScaleRowIndex() + 3);
+    }
+
+    private Rect globalHudBorderOpacityRow(Rect card) {
+        return optionRow(card, globalTextScaleRowIndex() + 4);
+    }
+
+    private Rect globalHudGradientRow(Rect card) {
+        return optionRow(card, globalTextScaleRowIndex() + 5);
+    }
+
+    private Rect globalHudCompactRow(Rect card) {
+        return optionRow(card, globalTextScaleRowIndex() + 6);
+    }
+
+    private Rect hudStyleButton(Rect card) {
+        Rect row = globalHudStyleRow(card);
+        return new Rect(row.right() - 86, row.y(), 86, 17);
+    }
+
+    private Rect hudAccentSwatch(Rect card, HudAccentColorOption option) {
+        Rect row = globalHudAccentRow(card);
+        int size = 11;
+        int gap = 4;
+        int count = HudAccentColorOption.all().size();
+        int index = HudAccentColorOption.all().indexOf(option);
+        int x = row.right() - count * size - (count - 1) * gap + index * (size + gap);
+        return new Rect(x, row.y() + 3, size, size);
+    }
+
+    private Rect hudBackgroundOpacitySlider(Rect card) {
+        Rect row = globalHudBackgroundOpacityRow(card);
+        return new Rect(row.x(), row.y() + 14, Math.max(30, row.width() - 48), 3);
+    }
+
+    private Rect hudBorderOpacitySlider(Rect card) {
+        Rect row = globalHudBorderOpacityRow(card);
         return new Rect(row.x(), row.y() + 14, Math.max(30, row.width() - 48), 3);
     }
 
@@ -1551,6 +1696,15 @@ public final class JafuV2Screen extends Screen {
 
     private static String formatScale(double value) {
         return String.format("%.2f", value);
+    }
+
+    private static String formatPercent(double value) {
+        return Math.round(value * 100.0D) + "%";
+    }
+
+    private static double hudOpacityPercent(double value) {
+        return (value - GlobalSettings.MIN_HUD_OPACITY)
+                / (GlobalSettings.MAX_HUD_OPACITY - GlobalSettings.MIN_HUD_OPACITY);
     }
 
     private static String formatPowderAutoResetSeconds(double value) {

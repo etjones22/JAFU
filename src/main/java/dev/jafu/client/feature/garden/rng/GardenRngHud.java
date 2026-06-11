@@ -9,6 +9,7 @@ import dev.jafu.client.gui.util.GuiDraw;
 import dev.jafu.client.gui.util.Rect;
 import dev.jafu.client.hud.HudLayoutStore;
 import dev.jafu.client.hud.JafuHudElements;
+import dev.jafu.client.hud.JafuHudChrome;
 import dev.jafu.client.module.JafuModules;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -39,7 +40,7 @@ public final class GardenRngHud {
         int lineHeight = lineHeight();
         int activeDropCount = Math.min(MAX_DROPS, snapshot.drops().size());
         int statLines = visibleStatLines();
-        int height = 42 + statLines * lineHeight + activeDropCount * (lineHeight * 2 + 2);
+        int height = JafuHudChrome.extraHeight() + lineHeight + 8 + statLines * lineHeight + activeDropCount * (lineHeight * 2 + 2);
         Rect bounds = HudLayoutStore.INSTANCE.bounds(
                 JafuHudElements.GARDEN_RNG_CALCULATOR,
                 WIDTH,
@@ -47,18 +48,15 @@ public final class GardenRngHud {
                 client.getWindow().getScaledWidth(),
                 client.getWindow().getScaledHeight()
         );
-        int x = bounds.x() + 5;
-        int y = bounds.y() + 5;
-
-        GuiDraw.fill(context, bounds, 0xB00A1117);
-        GuiDraw.horizontalLine(context, bounds.x(), bounds.y(), bounds.width(), 0xFFFFAA00);
-        drawText(context, client.textRenderer, "Garden RNG Calculator", x, y, 0xFFFFAA00);
+        Rect content = JafuHudChrome.draw(context, client.textRenderer, bounds, "Garden RNG Calculator", 0xFFFFAA00);
+        int x = content.x();
+        int y = content.y();
 
         String crop = snapshot.activeCrop() == null ? "Harvest a crop to start" : snapshot.activeCrop().label();
-        drawText(context, client.textRenderer, "Crop:", x, y + lineHeight + 4, JafuTheme.TEXT_MUTED);
-        drawText(context, client.textRenderer, crop, x + 42, y + lineHeight + 4, snapshot.activeCrop() == null ? JafuTheme.TEXT_MUTED : JafuTheme.GOOD);
+        drawText(context, client.textRenderer, "Crop:", x, y, JafuTheme.TEXT_MUTED);
+        drawText(context, client.textRenderer, crop, x + 42, y, snapshot.activeCrop() == null ? JafuTheme.TEXT_MUTED : JafuTheme.GOOD);
 
-        int rowY = y + lineHeight * 2 + 10;
+        int rowY = y + lineHeight + 8;
         rowY = drawSessionStats(context, client.textRenderer, snapshot, x, rowY, lineHeight);
 
         List<GardenDropState> drops = snapshot.drops().stream().limit(MAX_DROPS).toList();

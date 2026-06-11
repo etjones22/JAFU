@@ -5,6 +5,7 @@ import dev.jafu.client.gui.util.GuiDraw;
 import dev.jafu.client.gui.util.Rect;
 import dev.jafu.client.hud.HudLayoutStore;
 import dev.jafu.client.hud.JafuHudElements;
+import dev.jafu.client.hud.JafuHudChrome;
 import dev.jafu.client.module.JafuModules;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -13,8 +14,8 @@ import net.minecraft.client.render.RenderTickCounter;
 
 public final class CooldownDisplayHud {
     private static final int WIDTH = 176;
-    private static final int TEXT_HEIGHT = 44;
-    private static final int BAR_HEIGHT = 54;
+    private static final int TEXT_CONTENT_HEIGHT = 28;
+    private static final int BAR_CONTENT_HEIGHT = 38;
 
     public void render(DrawContext context, RenderTickCounter tickCounter) {
         MinecraftClient client = MinecraftClient.getInstance();
@@ -28,7 +29,7 @@ public final class CooldownDisplayHud {
         }
 
         boolean progressBar = CooldownDisplaySettings.INSTANCE.isEnabled(CooldownDisplayOption.USE_PROGRESS_BAR);
-        int height = progressBar ? BAR_HEIGHT : TEXT_HEIGHT;
+        int height = JafuHudChrome.extraHeight() + (progressBar ? BAR_CONTENT_HEIGHT : TEXT_CONTENT_HEIGHT);
         Rect bounds = HudLayoutStore.INSTANCE.bounds(
                 JafuHudElements.COOLDOWN_DISPLAY,
                 WIDTH,
@@ -38,32 +39,31 @@ public final class CooldownDisplayHud {
         );
         TextRenderer textRenderer = client.textRenderer;
         int textColor = CooldownDisplaySettings.INSTANCE.textColor();
-        int x = bounds.x() + 6;
-        int y = bounds.y() + 5;
+        Rect content = JafuHudChrome.draw(context, textRenderer, bounds, "Cooldown", textColor);
+        int x = content.x();
+        int y = content.y();
 
-        GuiDraw.fill(context, bounds, 0xAA101218);
-        GuiDraw.text(context, textRenderer, "Cooldown", x, y, textColor);
         if (CooldownDisplaySettings.INSTANCE.isEnabled(CooldownDisplayOption.SHOW_ITEM_NAME)) {
-            GuiDraw.text(context, textRenderer, trimToWidth(textRenderer, state.itemName(), bounds.width() - 12), x, y + 12, JafuTheme.TEXT);
+            GuiDraw.text(context, textRenderer, trimToWidth(textRenderer, state.itemName(), content.width()), x, y, JafuTheme.TEXT);
         }
 
         if (progressBar) {
-            drawProgressBar(context, textRenderer, bounds, state, textColor);
+            drawProgressBar(context, textRenderer, bounds, content, state, textColor);
             return;
         }
 
-        GuiDraw.text(context, textRenderer, "Ready in " + formatSeconds(state.remainingMillis()), x, y + 26, textColor);
+        GuiDraw.text(context, textRenderer, "Ready in " + formatSeconds(state.remainingMillis()), x, y + 14, textColor);
     }
 
-    private static void drawProgressBar(DrawContext context, TextRenderer textRenderer, Rect bounds, CooldownDisplayState state, int color) {
-        int x = bounds.x() + 6;
+    private static void drawProgressBar(DrawContext context, TextRenderer textRenderer, Rect bounds, Rect content, CooldownDisplayState state, int color) {
+        int x = content.x();
         int barY = bounds.bottom() - 15;
-        Rect track = new Rect(x, barY, bounds.width() - 12, 6);
+        Rect track = new Rect(x, barY, content.width(), 6);
         int fillWidth = (int) Math.round(track.width() * state.progress());
 
         GuiDraw.fill(context, track, JafuTheme.CONTROL);
         GuiDraw.fill(context, new Rect(track.x(), track.y(), fillWidth, track.height()), color);
-        GuiDraw.text(context, textRenderer, formatSeconds(state.remainingMillis()), bounds.right() - 42, bounds.y() + 5, color);
+        GuiDraw.text(context, textRenderer, formatSeconds(state.remainingMillis()), bounds.right() - 42, bounds.y() + 3, color);
     }
 
     private static String formatSeconds(long remainingMillis) {

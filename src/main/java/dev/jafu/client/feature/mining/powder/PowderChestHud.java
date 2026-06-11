@@ -13,6 +13,7 @@ import dev.jafu.client.gui.util.GuiDraw;
 import dev.jafu.client.gui.util.Rect;
 import dev.jafu.client.hud.HudLayoutStore;
 import dev.jafu.client.hud.JafuHudElements;
+import dev.jafu.client.hud.JafuHudChrome;
 import dev.jafu.client.module.JafuModules;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -52,7 +53,7 @@ public final class PowderChestHud {
         int lineHeight = lineHeight();
         int headerGap = Math.max(12, lineHeight + 2);
         int dropNameWidth = scaledTextWidthLimit(WIDTH - 76);
-        int height = 14 + headerGap * 3 + PowderChestSettings.INSTANCE.visibleStatCount() * lineHeight + drops.size() * lineHeight;
+        int height = JafuHudChrome.extraHeight() + headerGap * 3 + PowderChestSettings.INSTANCE.visibleStatCount() * lineHeight + drops.size() * lineHeight;
         Rect bounds = HudLayoutStore.INSTANCE.bounds(
                 JafuHudElements.POWDER_CHEST_TRACKER,
                 WIDTH,
@@ -60,17 +61,16 @@ public final class PowderChestHud {
                 client.getWindow().getScaledWidth(),
                 client.getWindow().getScaledHeight()
         );
-        int x = bounds.x() + 4;
-        int y = bounds.y() + 4;
+        Rect content = JafuHudChrome.draw(context, textRenderer, bounds, "Powder Chest Tracker", 0xFFFFFF55);
+        int x = content.x();
+        int y = content.y();
 
-        GuiDraw.fill(context, bounds, 0xAA101218);
-        drawText(context, textRenderer, "Powder Chest Tracker", x, y, 0xFFFFFF55);
-        drawText(context, textRenderer, "Chests:", x, y + headerGap, JafuTheme.TEXT_MUTED);
-        drawText(context, textRenderer, Integer.toString(snapshot.chests()), x + 62, y + headerGap, JafuTheme.GOOD);
-        drawText(context, textRenderer, "Gemstone Powder:", x, y + headerGap * 2, JafuTheme.TEXT_MUTED);
-        drawText(context, textRenderer, format(snapshot.gemstonePowder()), x + 116, y + headerGap * 2, 0xFFFFAA00);
+        drawText(context, textRenderer, "Chests:", x, y, JafuTheme.TEXT_MUTED);
+        drawText(context, textRenderer, Integer.toString(snapshot.chests()), x + 62, y, JafuTheme.GOOD);
+        drawText(context, textRenderer, "Gemstone Powder:", x, y + headerGap, JafuTheme.TEXT_MUTED);
+        drawText(context, textRenderer, format(snapshot.gemstonePowder()), x + 116, y + headerGap, 0xFFFFAA00);
 
-        int rowY = y + headerGap * 3 + 4;
+        int rowY = y + headerGap * 2 + 4;
         rowY = drawStats(context, textRenderer, snapshot.stats(), x, rowY, lineHeight);
         Set<String> visibleDropNames = new HashSet<>();
         for (PowderChestDrop drop : drops) {

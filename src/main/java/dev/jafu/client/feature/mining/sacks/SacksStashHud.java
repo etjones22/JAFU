@@ -7,6 +7,7 @@ import dev.jafu.client.gui.util.GuiDraw;
 import dev.jafu.client.gui.util.Rect;
 import dev.jafu.client.hud.HudLayoutStore;
 import dev.jafu.client.hud.JafuHudElements;
+import dev.jafu.client.hud.JafuHudChrome;
 import dev.jafu.client.module.JafuModules;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -32,7 +33,7 @@ public final class SacksStashHud {
         TextRenderer textRenderer = client.textRenderer;
         SacksStashSnapshot snapshot = tracker.snapshot();
         int lineCount = lineCount(snapshot);
-        int height = 28 + lineCount * LINE_HEIGHT;
+        int height = JafuHudChrome.extraHeight() + lineCount * LINE_HEIGHT + 4;
         Rect bounds = HudLayoutStore.INSTANCE.bounds(
                 JafuHudElements.SACKS_STASH_TRACKER,
                 WIDTH,
@@ -40,13 +41,11 @@ public final class SacksStashHud {
                 client.getWindow().getScaledWidth(),
                 client.getWindow().getScaledHeight()
         );
-        int x = bounds.x() + 4;
-        int y = bounds.y() + 4;
+        Rect content = JafuHudChrome.draw(context, textRenderer, bounds, "Sacks/Stash Tracker", 0xFFFFFF55);
+        int x = content.x();
+        int y = content.y();
 
-        GuiDraw.fill(context, bounds, 0xAA101218);
-        GuiDraw.text(context, textRenderer, "Sacks/Stash Tracker", x, y, 0xFFFFFF55);
-
-        int rowY = y + 16;
+        int rowY = y;
         rowY = drawStat(context, textRenderer, SacksStashOption.SESSION_TOTAL, "Session", format(snapshot.sessionTotal()), x, rowY);
         rowY = drawStat(context, textRenderer, SacksStashOption.ITEMS_PER_HOUR, "Items/hr", format(snapshot.itemsPerHour()), x, rowY);
         rowY = drawStat(context, textRenderer, SacksStashOption.STASH_TOTAL, "Stash", format(snapshot.stashTotal()), x, rowY);
