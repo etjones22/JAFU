@@ -10,10 +10,10 @@ import dev.jafu.client.config.JafuConfigurable;
 import net.minecraft.util.math.MathHelper;
 
 public final class GardenRngSettings implements JafuConfigurable {
-    public static final GardenRngSettings INSTANCE = new GardenRngSettings();
     public static final double[] RATE_MULTIPLIER_PRESETS = {0.5D, 0.75D, 1.0D, 1.25D, 1.5D, 2.0D, 3.0D, 5.0D};
     public static final double[] AUTO_RESET_SECONDS_PRESETS = {5.0D, 10.0D, 15.0D, 30.0D, 60.0D, 120.0D, 300.0D};
     public static final double DEFAULT_AUTO_RESET_SECONDS = 15.0D;
+    public static final GardenRngSettings INSTANCE = new GardenRngSettings();
 
     private final ConfigFile config = ConfigFile.named("jafu-garden-rng.properties");
     private final Map<GardenRngStatOption, Boolean> visibleStats = new EnumMap<>(GardenRngStatOption.class);
