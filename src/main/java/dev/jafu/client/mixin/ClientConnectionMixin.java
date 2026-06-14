@@ -1,7 +1,9 @@
 package dev.jafu.client.mixin;
 
+import dev.jafu.client.feature.general.dev.PacketLogFeature;
 import dev.jafu.client.feature.qol.modhider.ModHiderFeature;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.common.CustomPayloadC2SPacket;
@@ -18,5 +20,15 @@ public abstract class ClientConnectionMixin {
                 && ModHiderFeature.shouldBlock(customPayloadPacket.payload())) {
             ci.cancel();
         }
+    }
+
+    @Inject(method = "send(Lnet/minecraft/network/packet/Packet;Lio/netty/channel/ChannelFutureListener;Z)V", at = @At("HEAD"))
+    private void jafu$logOutbound(Packet<?> packet, ChannelFutureListener callback, boolean flush, CallbackInfo ci) {
+        PacketLogFeature.logOutbound(packet);
+    }
+
+    @Inject(method = "channelRead0(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/packet/Packet;)V", at = @At("HEAD"))
+    private void jafu$logInbound(ChannelHandlerContext context, Packet<?> packet, CallbackInfo ci) {
+        PacketLogFeature.logInbound(packet);
     }
 }

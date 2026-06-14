@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.DoubleArgumentType;
 
 import dev.jafu.client.config.JafuConfigManager;
 import dev.jafu.client.config.JafuConfigManager.ConfigOperationResult;
+import dev.jafu.client.feature.general.dev.PacketLogFeature;
 import dev.jafu.client.feature.general.path.PathTracerFeature;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.general.updater.UpdateChannel;
@@ -43,6 +44,20 @@ public final class JafuCommands {
                                                             PathTracerFeature.setTarget(x, y, z);
                                                             return 1;
                                                         })))))
+                        .then(ClientCommandManager.literal("dev")
+                                .then(ClientCommandManager.literal("packetlog")
+                                        .executes(context -> {
+                                            PacketLogFeature.toggle();
+                                            return 1;
+                                        })
+                                        .then(ClientCommandManager.literal("on").executes(context -> {
+                                            PacketLogFeature.setEnabled(true);
+                                            return 1;
+                                        }))
+                                        .then(ClientCommandManager.literal("off").executes(context -> {
+                                            PacketLogFeature.setEnabled(false);
+                                            return 1;
+                                        }))))
                         .then(ClientCommandManager.literal("config")
                                 .then(ClientCommandManager.literal("save").executes(context -> saveConfigs()))
                                 .then(ClientCommandManager.literal("reload").executes(context -> reloadConfigs())))
