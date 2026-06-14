@@ -1,9 +1,12 @@
 package dev.jafu.client.command;
 
-import dev.jafu.client.feature.general.updater.AutoUpdater;
-import dev.jafu.client.feature.general.updater.UpdateChannel;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
+
 import dev.jafu.client.config.JafuConfigManager;
 import dev.jafu.client.config.JafuConfigManager.ConfigOperationResult;
+import dev.jafu.client.feature.general.path.PathTracerFeature;
+import dev.jafu.client.feature.general.updater.AutoUpdater;
+import dev.jafu.client.feature.general.updater.UpdateChannel;
 import dev.jafu.client.gui.HudLayoutScreen;
 import dev.jafu.client.gui.JafuScreens;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -16,32 +19,54 @@ public final class JafuCommands {
 
     public static void register() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
-                dispatcher.register(ClientCommandManager.literal("jafu").executes(context -> {
-                    openMenu();
-                    return 1;
-                }).then(ClientCommandManager.literal("layout").executes(context -> {
-                    openLayout();
-                    return 1;
-                })).then(ClientCommandManager.literal("config").then(ClientCommandManager.literal("save").executes(context -> {
-                    return saveConfigs();
-                })).then(ClientCommandManager.literal("reload").executes(context -> {
-                    return reloadConfigs();
-                }))).then(ClientCommandManager.literal("update").executes(context -> {
-                    AutoUpdater.checkNow(true);
-                    return 1;
-                }).then(ClientCommandManager.literal("check").executes(context -> {
-                    AutoUpdater.checkNow(true);
-                    return 1;
-                })).then(ClientCommandManager.literal("stable").executes(context -> {
-                    AutoUpdater.setChannel(UpdateChannel.STABLE, true);
-                    return 1;
-                })).then(ClientCommandManager.literal("snapshot").executes(context -> {
-                    AutoUpdater.setChannel(UpdateChannel.SNAPSHOT, true);
-                    return 1;
-                })).then(ClientCommandManager.literal("dev").executes(context -> {
-                    AutoUpdater.setChannel(UpdateChannel.SNAPSHOT, true);
-                    return 1;
-                })))));
+                dispatcher.register(ClientCommandManager.literal("jafu")
+                        .executes(context -> {
+                            openMenu();
+                            return 1;
+                        })
+                        .then(ClientCommandManager.literal("layout").executes(context -> {
+                            openLayout();
+                            return 1;
+                        }))
+                        .then(ClientCommandManager.literal("path")
+                                .then(ClientCommandManager.literal("remove").executes(context -> {
+                                    PathTracerFeature.removeTarget(true);
+                                    return 1;
+                                }))
+                                .then(ClientCommandManager.argument("x", DoubleArgumentType.doubleArg())
+                                        .then(ClientCommandManager.argument("y", DoubleArgumentType.doubleArg())
+                                                .then(ClientCommandManager.argument("z", DoubleArgumentType.doubleArg())
+                                                        .executes(context -> {
+                                                            double x = DoubleArgumentType.getDouble(context, "x");
+                                                            double y = DoubleArgumentType.getDouble(context, "y");
+                                                            double z = DoubleArgumentType.getDouble(context, "z");
+                                                            PathTracerFeature.setTarget(x, y, z);
+                                                            return 1;
+                                                        })))))
+                        .then(ClientCommandManager.literal("config")
+                                .then(ClientCommandManager.literal("save").executes(context -> saveConfigs()))
+                                .then(ClientCommandManager.literal("reload").executes(context -> reloadConfigs())))
+                        .then(ClientCommandManager.literal("update")
+                                .executes(context -> {
+                                    AutoUpdater.checkNow(true);
+                                    return 1;
+                                })
+                                .then(ClientCommandManager.literal("check").executes(context -> {
+                                    AutoUpdater.checkNow(true);
+                                    return 1;
+                                }))
+                                .then(ClientCommandManager.literal("stable").executes(context -> {
+                                    AutoUpdater.setChannel(UpdateChannel.STABLE, true);
+                                    return 1;
+                                }))
+                                .then(ClientCommandManager.literal("snapshot").executes(context -> {
+                                    AutoUpdater.setChannel(UpdateChannel.SNAPSHOT, true);
+                                    return 1;
+                                }))
+                                .then(ClientCommandManager.literal("dev").executes(context -> {
+                                    AutoUpdater.setChannel(UpdateChannel.SNAPSHOT, true);
+                                    return 1;
+                                })))));
     }
 
     private static void openMenu() {

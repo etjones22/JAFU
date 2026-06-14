@@ -3,6 +3,7 @@ package dev.jafu.client;
 import dev.jafu.client.command.JafuCommands;
 import dev.jafu.client.config.JafuConfigs;
 import dev.jafu.client.feature.general.etherwarp.EtherwarpFeature;
+import dev.jafu.client.feature.general.path.PathTracerFeature;
 import dev.jafu.client.feature.general.updater.AutoUpdater;
 import dev.jafu.client.feature.garden.rng.GardenRngFeature;
 import dev.jafu.client.feature.mining.powder.PowderChestFeature;
@@ -18,6 +19,7 @@ public final class JafuClient implements ClientModInitializer {
         JafuConfigs.bootstrap();
         JafuCommands.register();
         EtherwarpFeature.register();
+        PathTracerFeature.register();
         PowderChestFeature.register();
         SacksStashFeature.register();
         CooldownDisplayFeature.register();
