@@ -83,6 +83,7 @@ public final class JafuScreen extends Screen {
     private double globalFontDropdownAnimation;
     private final Map<String, Double> animatedProgress = new HashMap<>();
     private final Map<String, Double> animatedSliders = new HashMap<>();
+    private final Map<String, Double> detailScrollOffsets = new HashMap<>();
 
     public JafuScreen() {
         super(TITLE);
@@ -159,48 +160,51 @@ public final class JafuScreen extends Screen {
             return super.mouseClicked(click, doubled);
         }
 
-        if (togglePowderTrackerOption(layout, click)) {
-            return true;
-        }
+        if (detailOptionsViewport(layout.detailPanel()).contains(click.x(), click.y())) {
+            Click detailClick = scrolledDetailClick(layout, click);
+            if (togglePowderTrackerOption(layout, detailClick)) {
+                return true;
+            }
 
-        if (toggleSacksStashTrackerOption(layout, click)) {
-            return true;
-        }
+            if (toggleSacksStashTrackerOption(layout, detailClick)) {
+                return true;
+            }
 
-        if (toggleGardenRngOption(layout, click)) {
-            return true;
-        }
+            if (toggleGardenRngOption(layout, detailClick)) {
+                return true;
+            }
 
-        if (toggleGuiSettingsOption(layout, click)) {
-            return true;
-        }
+            if (toggleGuiSettingsOption(layout, detailClick)) {
+                return true;
+            }
 
-        if (toggleGlobalSettingsOption(layout, click)) {
-            return true;
-        }
+            if (toggleGlobalSettingsOption(layout, detailClick)) {
+                return true;
+            }
 
-        if (startItemViewSlider(layout, click)) {
-            return true;
-        }
+            if (startItemViewSlider(layout, detailClick)) {
+                return true;
+            }
 
-        if (toggleChatEnhancementOption(layout, click)) {
-            return true;
-        }
+            if (toggleChatEnhancementOption(layout, detailClick)) {
+                return true;
+            }
 
-        if (toggleScrollableTooltipsOption(layout, click)) {
-            return true;
-        }
+            if (toggleScrollableTooltipsOption(layout, detailClick)) {
+                return true;
+            }
 
-        if (toggleItemValueOverlayOption(layout, click)) {
-            return true;
-        }
+            if (toggleItemValueOverlayOption(layout, detailClick)) {
+                return true;
+            }
 
-        if (toggleCooldownDisplayOption(layout, click)) {
-            return true;
-        }
+            if (toggleCooldownDisplayOption(layout, detailClick)) {
+                return true;
+            }
 
-        if (toggleAutoUpdaterOption(layout, click)) {
-            return true;
+            if (toggleAutoUpdaterOption(layout, detailClick)) {
+                return true;
+            }
         }
 
         if (toggleModule(layout, click)) {
@@ -266,6 +270,22 @@ public final class JafuScreen extends Screen {
         }
 
         return super.mouseDragged(click, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (closingStartedAtMillis >= 0L) {
+            return true;
+        }
+
+        JafuLayout layout = JafuLayout.fromScreen(width, height);
+        if (selectedCategory != JafuCategory.CREDITS
+                && detailOptionsViewport(layout.detailPanel()).contains(mouseX, mouseY)
+                && maxDetailScroll(layout) > 0.5D) {
+            setDetailScrollOffset(layout, detailScrollOffset(layout) - verticalAmount * 24.0D);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override
@@ -340,6 +360,9 @@ public final class JafuScreen extends Screen {
                 }
                 selectedCategory = categories[i];
                 selectedModuleIndex = 0;
+                if (selectedCategory != JafuCategory.CREDITS) {
+                    setDetailScrollOffset(layout, 0.0D);
+                }
                 return true;
             }
         }
@@ -355,6 +378,7 @@ public final class JafuScreen extends Screen {
                     globalFontDropdownOpen = false;
                 }
                 selectedModuleIndex = i;
+                setDetailScrollOffset(layout, 0.0D);
                 return true;
             }
         }
@@ -485,18 +509,18 @@ public final class JafuScreen extends Screen {
         drawCreditsPulseBar(context, new Rect(creditsPanel.x() + 18, creditsPanel.y() + 20, creditsPanel.width() - 36, 3), nowMillis);
 
         int firstLineY = creditsPanel.y() + 42;
-        int firstLineWidth = textRenderer.getWidth("Made with ") + textRenderer.getWidth("ChatGPT");
-        int firstLineX = creditsPanel.x() + (creditsPanel.width() - firstLineWidth) / 2;
-        GuiDraw.text(context, textRenderer, "Made with ", firstLineX, firstLineY, JafuTheme.TEXT_MUTED);
-        drawAnimatedCreditsWord(
-                context,
-                "ChatGPT",
-                firstLineX + textRenderer.getWidth("Made with "),
-                firstLineY,
-                nowMillis,
-                JafuTheme.ACCENT,
-                JafuTheme.GOOD
-        );
+//        int firstLineWidth = textRenderer.getWidth("Made with ") + textRenderer.getWidth("ChatGPT");
+//        int firstLineX = creditsPanel.x() + (creditsPanel.width() - firstLineWidth) / 2;
+//        GuiDraw.text(context, textRenderer, "Made with ", firstLineX, firstLineY, JafuTheme.TEXT_MUTED);
+//        drawAnimatedCreditsWord(
+//                context,
+//                "ChatGPT",
+//                firstLineX + textRenderer.getWidth("Made with "),
+//                firstLineY,
+//                nowMillis,
+//                JafuTheme.ACCENT,
+//                JafuTheme.GOOD
+//        );
 
         int secondLineY = firstLineY + 34;
         int secondLineWidth = textRenderer.getWidth("Mashed together by ") + textRenderer.getWidth("Chorey");
@@ -614,6 +638,9 @@ public final class JafuScreen extends Screen {
 
         Rect detailPanel = layout.detailPanel();
         JafuModule selectedModule = selectedModule();
+        setDetailScrollOffset(layout, detailScrollOffset(layout));
+        Rect viewport = detailOptionsViewport(detailPanel);
+        Rect scrolledDetailPanel = scrolledDetailPanel(layout);
 
         GuiDraw.fill(context, detailPanel, JafuTheme.PANEL_LIGHT);
         GuiDraw.horizontalLine(context, detailPanel.x(), detailPanel.y(), detailPanel.width(), JafuTheme.ACCENT);
@@ -627,33 +654,39 @@ public final class JafuScreen extends Screen {
                 selectedModule.enabled() ? JafuTheme.GOOD : JafuTheme.WARN
         );
 
-        if (JafuModules.POWDER_CHEST_TRACKER.equals(selectedModule.id())) {
-            drawPowderTrackerOptions(context, detailPanel);
-        } else if (JafuModules.SACKS_STASH_TRACKER.equals(selectedModule.id())) {
-            drawSacksStashTrackerOptions(context, detailPanel);
-        } else if (JafuModules.GARDEN_RNG_CALCULATOR.equals(selectedModule.id())) {
-            drawGardenRngOptions(context, detailPanel);
-        } else if (JafuModules.GLOBAL_SETTINGS.equals(selectedModule.id())) {
-            drawGlobalSettingsOptions(context, detailPanel);
-        } else if (JafuModules.GUI_SETTINGS.equals(selectedModule.id())) {
-            drawGuiSettingsOptions(context, detailPanel);
-        } else if (JafuModules.ITEM_VIEW.equals(selectedModule.id())) {
-            drawItemViewOptions(context, detailPanel);
-        } else if (JafuModules.CHAT_ENHANCEMENTS.equals(selectedModule.id())) {
-            drawChatEnhancementOptions(context, detailPanel);
-        } else if (JafuModules.SCROLLABLE_TOOLTIPS.equals(selectedModule.id())) {
-            drawScrollableTooltipsOptions(context, detailPanel);
-        } else if (JafuModules.STORAGE_INDEXER.equals(selectedModule.id())) {
-            drawStorageIndexerOptions(context, detailPanel);
-        } else if (JafuModules.ITEM_VALUE_OVERLAY.equals(selectedModule.id())) {
-            drawItemValueOverlayOptions(context, detailPanel);
-        } else if (JafuModules.COOLDOWN_DISPLAY.equals(selectedModule.id())) {
-            drawCooldownDisplayOptions(context, detailPanel);
-        } else if (JafuModules.AUTO_UPDATER.equals(selectedModule.id())) {
-            drawAutoUpdaterOptions(context, detailPanel);
-        } else {
-            drawPreview(context, detailPanel);
+        context.enableScissor(viewport.left(), viewport.top(), viewport.right(), viewport.bottom());
+        try {
+            if (JafuModules.POWDER_CHEST_TRACKER.equals(selectedModule.id())) {
+                drawPowderTrackerOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.SACKS_STASH_TRACKER.equals(selectedModule.id())) {
+                drawSacksStashTrackerOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.GARDEN_RNG_CALCULATOR.equals(selectedModule.id())) {
+                drawGardenRngOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.GLOBAL_SETTINGS.equals(selectedModule.id())) {
+                drawGlobalSettingsOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.GUI_SETTINGS.equals(selectedModule.id())) {
+                drawGuiSettingsOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.ITEM_VIEW.equals(selectedModule.id())) {
+                drawItemViewOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.CHAT_ENHANCEMENTS.equals(selectedModule.id())) {
+                drawChatEnhancementOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.SCROLLABLE_TOOLTIPS.equals(selectedModule.id())) {
+                drawScrollableTooltipsOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.STORAGE_INDEXER.equals(selectedModule.id())) {
+                drawStorageIndexerOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.ITEM_VALUE_OVERLAY.equals(selectedModule.id())) {
+                drawItemValueOverlayOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.COOLDOWN_DISPLAY.equals(selectedModule.id())) {
+                drawCooldownDisplayOptions(context, scrolledDetailPanel);
+            } else if (JafuModules.AUTO_UPDATER.equals(selectedModule.id())) {
+                drawAutoUpdaterOptions(context, scrolledDetailPanel);
+            } else {
+                drawPreview(context, scrolledDetailPanel);
+            }
+        } finally {
+            context.disableScissor();
         }
+        drawDetailScrollbar(context, layout);
         drawStatus(context, layout);
         context.getMatrices().popMatrix();
     }
@@ -1123,6 +1156,24 @@ public final class JafuScreen extends Screen {
         GuiDraw.text(context, textRenderer, text, status.x() + 12, status.y() + 6, JafuTheme.GOOD);
     }
 
+    private void drawDetailScrollbar(DrawContext context, JafuLayout layout) {
+        double maxScroll = maxDetailScroll(layout);
+        if (maxScroll <= 0.5D) {
+            return;
+        }
+
+        Rect viewport = detailOptionsViewport(layout.detailPanel());
+        int contentHeight = viewport.height() + (int) Math.ceil(maxScroll);
+        int thumbHeight = Math.max(22, viewport.height() * viewport.height() / Math.max(viewport.height(), contentHeight));
+        int travel = Math.max(1, viewport.height() - thumbHeight);
+        int thumbY = viewport.y() + (int) Math.round((detailScrollOffset(layout) / maxScroll) * travel);
+
+        GuiDraw.fill(context, new Rect(viewport.right() - 6, viewport.y(), 1, viewport.height()), 0x553A4657);
+        GuiDraw.fill(context, new Rect(viewport.right() - 7, thumbY, 3, thumbHeight), JafuTheme.ACCENT_SOFT);
+        GuiDraw.fill(context, new Rect(viewport.x(), viewport.y(), viewport.width() - 10, 8), 0x55101418);
+        GuiDraw.fill(context, new Rect(viewport.x(), viewport.bottom() - 8, viewport.width() - 10, 8), 0x55101418);
+    }
+
     private void drawHoverTooltip(DrawContext context, JafuLayout layout, int mouseX, int mouseY) {
         if (closingStartedAtMillis >= 0L || selectedCategory != JafuCategory.QOL) {
             return;
@@ -1157,6 +1208,92 @@ public final class JafuScreen extends Screen {
             selectedModuleIndex = Math.max(0, modules.size() - 1);
         }
         return modules;
+    }
+
+    private Click scrolledDetailClick(JafuLayout layout, Click click) {
+        return new Click(click.x(), click.y() + detailScrollOffset(layout), click.buttonInfo());
+    }
+
+    private Rect scrolledDetailPanel(JafuLayout layout) {
+        Rect detailPanel = layout.detailPanel();
+        return new Rect(
+                detailPanel.x(),
+                detailPanel.y() - (int) Math.round(detailScrollOffset(layout)),
+                detailPanel.width(),
+                detailPanel.height()
+        );
+    }
+
+    private double detailScrollOffset(JafuLayout layout) {
+        return detailScrollOffsets.getOrDefault(detailScrollKey(), 0.0D);
+    }
+
+    private void setDetailScrollOffset(JafuLayout layout, double value) {
+        double clamped = MathHelper.clamp(value, 0.0D, maxDetailScroll(layout));
+        if (clamped <= 0.5D) {
+            detailScrollOffsets.remove(detailScrollKey());
+            return;
+        }
+        detailScrollOffsets.put(detailScrollKey(), clamped);
+    }
+
+    private String detailScrollKey() {
+        return selectedCategory.name() + ":" + selectedModule().id();
+    }
+
+    private double maxDetailScroll(JafuLayout layout) {
+        Rect detailPanel = layout.detailPanel();
+        Rect viewport = detailOptionsViewport(detailPanel);
+        return Math.max(0, detailContentBottom(detailPanel, selectedModule()) - viewport.bottom());
+    }
+
+    private int detailContentBottom(Rect detailPanel, JafuModule module) {
+        if (JafuModules.POWDER_CHEST_TRACKER.equals(module.id())) {
+            return powderTrackerResetButton(detailPanel).bottom() + 12;
+        }
+        if (JafuModules.SACKS_STASH_TRACKER.equals(module.id())) {
+            return trackerOptionRow(detailPanel, SacksStashOption.all().size() - 1).bottom() + 12;
+        }
+        if (JafuModules.GARDEN_RNG_CALCULATOR.equals(module.id())) {
+            int activeDropCount = Math.min(3, GardenRngFeature.snapshot().drops().size());
+            int lastRateRow = gardenRateRowsStart() - 1 + Math.max(0, activeDropCount);
+            int lastRow = Math.max(gardenTogglesStart() + 9, lastRateRow);
+            return trackerOptionRow(detailPanel, lastRow).bottom() + 12;
+        }
+        if (JafuModules.GLOBAL_SETTINGS.equals(module.id())) {
+            int bottom = trackerOptionRow(detailPanel, 9).bottom() + 12;
+            if (globalFontDropdownOpen) {
+                Rect control = globalFontControl(detailPanel);
+                bottom = Math.max(bottom, globalFontDropdownRow(control, GlobalFontOption.values().length - 1).bottom() + 12);
+            }
+            return bottom;
+        }
+        if (JafuModules.GUI_SETTINGS.equals(module.id())) {
+            return trackerOptionRow(detailPanel, 0).bottom() + 12;
+        }
+        if (JafuModules.ITEM_VIEW.equals(module.id())) {
+            return trackerOptionRow(detailPanel, ItemViewSetting.all().size() - 1).bottom() + 12;
+        }
+        if (JafuModules.CHAT_ENHANCEMENTS.equals(module.id())) {
+            return chatScaleRow(detailPanel).bottom() + 12;
+        }
+        if (JafuModules.SCROLLABLE_TOOLTIPS.equals(module.id())) {
+            return trackerOptionRow(detailPanel, ScrollableTooltipNumericSetting.all().size() + 1).bottom() + 12;
+        }
+        if (JafuModules.STORAGE_INDEXER.equals(module.id())) {
+            return detailPanel.y() + 188;
+        }
+        if (JafuModules.ITEM_VALUE_OVERLAY.equals(module.id())) {
+            int rowIndex = ItemValueOverlayOption.all().size() + ItemValueNumericSetting.all().size() + 1;
+            return trackerOptionRow(detailPanel, rowIndex).y() + 72;
+        }
+        if (JafuModules.COOLDOWN_DISPLAY.equals(module.id())) {
+            return trackerOptionRow(detailPanel, CooldownDisplayOption.all().size() + 3).y() + 58;
+        }
+        if (JafuModules.AUTO_UPDATER.equals(module.id())) {
+            return detailPanel.y() + 178;
+        }
+        return detailPanel.y() + 160;
     }
 
     private boolean togglePowderTrackerOption(JafuLayout layout, Click click) {
@@ -1769,6 +1906,15 @@ public final class JafuScreen extends Screen {
 
     private static Rect trackerOptionRow(Rect detailPanel, int index) {
         return new Rect(detailPanel.x() + 16, detailPanel.y() + 78 + index * 20, detailPanel.width() - 32, 16);
+    }
+
+    private static Rect detailOptionsViewport(Rect detailPanel) {
+        return new Rect(
+                detailPanel.x() + 1,
+                detailPanel.y() + 52,
+                detailPanel.width() - 2,
+                Math.max(24, detailPanel.height() - 92)
+        );
     }
 
     private static Rect itemViewSlider(Rect detailPanel, int index) {

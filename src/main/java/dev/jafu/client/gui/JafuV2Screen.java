@@ -712,7 +712,7 @@ public final class JafuV2Screen extends Screen {
         GuiDraw.fill(context, area, CARD);
         GuiDraw.fill(context, new Rect(area.x() + 1, area.y() + 1, 2, area.height() - 2), WARM);
         GuiDraw.text(context, textRenderer, "Credits", area.x() + 18, area.y() + 22, WARM);
-        GuiDraw.text(context, textRenderer, "Made with ChatGPT", area.x() + 18, area.y() + 58, JafuTheme.TEXT);
+//        GuiDraw.text(context, textRenderer, "Made with ChatGPT", area.x() + 18, area.y() + 58, JafuTheme.TEXT);
         GuiDraw.text(context, textRenderer, "Mashed together by Chorey", area.x() + 18, area.y() + 78, JafuTheme.WARN);
         GuiDraw.text(context, textRenderer, "All hail the LLM's", area.x() + 18, area.y() + 98, JafuTheme.GOOD);
         GuiDraw.text(context, textRenderer, "Mod Integrity: Success=false | Hash=unavailable", area.x() + 18, area.y() + 126, WARM);
@@ -1377,7 +1377,7 @@ public final class JafuV2Screen extends Screen {
             return 164;
         }
         if (JafuModules.GARDEN_RNG_CALCULATOR.equals(module.id())) {
-            return 496;
+            return gardenCardHeight();
         }
         if (JafuModules.ITEM_VIEW.equals(module.id())) {
             return 178;
@@ -1407,6 +1407,13 @@ public final class JafuV2Screen extends Screen {
             return 96;
         }
         return 64;
+    }
+
+    private int gardenCardHeight() {
+        int activeDropCount = Math.min(3, GardenRngFeature.snapshot().drops().size());
+        int lastRateRow = gardenRateRowsStart() - 1 + Math.max(0, activeDropCount);
+        int lastRow = Math.max(gardenTogglesStart() + 9, lastRateRow);
+        return 58 + lastRow * (OPTION_ROW_HEIGHT + OPTION_ROW_GAP) + OPTION_ROW_HEIGHT + 18;
     }
 
     private Rect moduleToggle(Rect panel, int index) {
